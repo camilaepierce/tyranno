@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>My test index page</title>
+  </head>
+  <body>
+    {% if upcoming_events_list %}
+        <ul>
+        {% for event in upcoming_events_list %}
+            <li><a href="{% url 'event' event.id %}">{{ event.event_name }}</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No events are available.</p>
+    {% endif %}
+  </body>
+</html>

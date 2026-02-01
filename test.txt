@@ -1,0 +1,31 @@
+BEGIN;
+--
+-- Create model RexEvent
+--
+CREATE TABLE "eventmanager_rexevent" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+    "event_name" varchar(20) NOT NULL, 
+    "description" varchar(200) NOT NULL, 
+    "dorm" varchar(20) NOT NULL, 
+    "dorm_sub" varchar(20) NOT NULL, 
+    "start_date" date NOT NULL, 
+    "end_date" date NOT NULL, 
+    "start_time" time NOT NULL, 
+    "end_time" time NOT NULL, 
+    "email_notif" text NOT NULL, 
+    "location" varchar NOT NULL, 
+    "contact_name" varchar(50) NOT NULL, 
+    "contact_email" varchar(20) NOT NULL, 
+    "res_status" varchar(2) NOT NULL, 
+    "ehs_status" varchar(2) NOT NULL, 
+    "ad_status" varchar(2) NOT NULL
+    );
+--
+-- Create model User
+--
+CREATE TABLE "eventmanager_user" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+    "username" varchar(200) NOT NULL, 
+    "role" varchar(10) NOT NULL
+    );
+COMMIT;
