@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}EHS Approvals - REX Events{% endblock %}
+{% block page_title %}EHS Pending Approvals{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Events Pending EHS Approval</h2>
+    </div>
+    <div class="card-body">
+        {% if upcoming_events_list %}
+            <div class="events-list">
+                {% for event in upcoming_events_list %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <div class="flex-between">
+                            <h3 style="margin: 0;">{{ event.event_name }}</h3>
+                            <span class="status-badge status-{% if event.ehs_status == 'AP' %}approved{% elif event.ehs_status == 'DE' %}denied{% elif event.ehs_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                                {{ event.get_ehs_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                            <div>
+                                <p><strong>Description:</strong> {{ event.description }}</p>
+                                <p><strong>Dorm:</strong> {{ event.dorm }}
+                                    {% if event.dorm_sub != "N/A" %}- {{ event.dorm_sub }}{% endif %}</p>
+                                <p><strong>Location:</strong> {{ event.location }}</p>
+                                <p><strong>Date:</strong> {{ event.start_time|date:"M d, Y g:i A" }} - {{ event.end_time|date:"g:i A" }}</p>
+                                <p><strong>Contact:</strong> {{ event.contact_name }} ({{ event.contact_email }})</p>
+                            </div>
+                            <div>
+                                <h4 style="color: var(--primary-color);">Other Approvals</h4>
+                                <p>
+                                    <strong>DC:</strong>
+                                    <span class="status-badge status-{% if event.dc_status == 'AP' %}approved{% elif event.dc_status == 'DE' %}denied{% elif event.dc_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                                        {{ event.get_dc_status_display }}
+                                    </span>
+                                </p>
+                                <p>
+                                    <strong>AD:</strong>
+                                    <span class="status-badge status-{% if event.ad_status == 'AP' %}approved{% elif event.ad_status == 'DE' %}denied{% elif event.ad_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                                        {{ event.get_ad_status_display }}
+                                    </span>
+                                </p>
+                                <p>
+                                    <strong>RES:</strong>
+                                    <span class="status-badge status-{% if event.res_status == 'AP' %}approved{% elif event.res_status == 'DE' %}denied{% elif event.res_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                                        {{ event.get_res_status_display }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'event' event.pk %}" class="btn btn-primary">View Full Details</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center" style="padding: 2rem;">
+                <p class="text-muted">No pending approvals at this time.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

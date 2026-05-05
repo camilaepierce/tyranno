@@ -10,10 +10,30 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
+
 from pathlib import Path
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_env_file(env_path):
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env_file(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -55,7 +75,7 @@ ROOT_URLCONF = 'pteryx.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'pteryx'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -116,3 +136,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+EMAIL_BACKEND = 'eventmanager.mail_backends.GmailAPIMailBackend'
+GMAIL_SERVICE_ACCOUNT_JSON_B64 = os.environ.get('GMAIL_SERVICE_ACCOUNT_JSON_B64', '')
+GMAIL_SERVICE_ACCOUNT_JSON = os.environ.get('GMAIL_SERVICE_ACCOUNT_JSON', '')
+GMAIL_DELEGATED_USER_EMAIL = os.environ.get('GMAIL_DELEGATED_USER_EMAIL', 'mit.rex.events@gmail.com')
+DEFAULT_FROM_EMAIL = GMAIL_DELEGATED_USER_EMAIL
+

@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Event Details - REX Events{% endblock %}
+{% block page_title %}Event Details{% endblock %}
+
+{% block content %}
+{% if rexevent %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">{{ rexevent.event_name }}</h2>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+            <div>
+                <h3 style="color: var(--primary-color); margin-bottom: 1rem;">Event Information</h3>
+                <div class="mb-3">
+                    <label><strong>Description:</strong></label>
+                    <p>{{ rexevent.description }}</p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>Dorm:</strong></label>
+                    <p>{{ rexevent.dorm }}
+                        {% if rexevent.dorm_sub != "N/A" %}
+                            - {{ rexevent.dorm_sub }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>Location:</strong></label>
+                    <p>{{ rexevent.location }}</p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>Start Time:</strong></label>
+                    <p>{{ rexevent.start_time|date:"M d, Y g:i A" }}</p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>End Time:</strong></label>
+                    <p>{{ rexevent.end_time|date:"M d, Y g:i A" }}</p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>Contact Name:</strong></label>
+                    <p>{{ rexevent.contact_name }}</p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>Contact Email:</strong></label>
+                    <p>{{ rexevent.contact_email }}</p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>Email Notifications:</strong></label>
+                    <p>{{ rexevent.email_notif }}</p>
+                </div>
+            </div>
+
+            <div>
+                <h3 style="color: var(--primary-color); margin-bottom: 1rem;">Approval Status</h3>
+                <div class="mb-3">
+                    <label><strong>DormCon Status:</strong></label>
+                    <p>
+                        <span class="status-badge status-{% if rexevent.dc_status == 'AP' %}approved{% elif rexevent.dc_status == 'DE' %}denied{% elif rexevent.dc_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                            {{ rexevent.get_dc_status_display }}
+                        </span>
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>Area Director Status:</strong></label>
+                    <p>
+                        <span class="status-badge status-{% if rexevent.ad_status == 'AP' %}approved{% elif rexevent.ad_status == 'DE' %}denied{% elif rexevent.ad_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                            {{ rexevent.get_ad_status_display }}
+                        </span>
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>RES Status:</strong></label>
+                    <p>
+                        <span class="status-badge status-{% if rexevent.res_status == 'AP' %}approved{% elif rexevent.res_status == 'DE' %}denied{% elif rexevent.res_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                            {{ rexevent.get_res_status_display }}
+                        </span>
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label><strong>EHS Status:</strong></label>
+                    <p>
+                        <span class="status-badge status-{% if rexevent.ehs_status == 'AP' %}approved{% elif rexevent.ehs_status == 'DE' %}denied{% elif rexevent.ehs_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                            {{ rexevent.get_ehs_status_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Show edit/delete buttons only if user is the creator -->
+        {% if user_role == 'Student' or user_role == 'DormCon' %}
+        <div class="card-footer">
+            <a href="{% url 'event-update' rexevent.pk %}" class="btn btn-primary">Edit Event</a>
+            <a href="{% url 'event-delete' rexevent.pk %}" class="btn btn-danger">Delete Event</a>
+            <a href="{% url 'index' %}" class="btn btn-secondary">Back</a>
+        </div>
+        {% else %}
+        <div class="card-footer">
+            <a href="{% url 'index' %}" class="btn btn-secondary">Back</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center">
+        <p class="text-muted">Event unavailable. Check back soon.</p>
+        <a href="{% url 'index' %}" class="btn btn-secondary">Back to Events</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

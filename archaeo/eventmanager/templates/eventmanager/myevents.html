@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Events - REX Events{% endblock %}
+{% block page_title %}My Events{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header flex-between">
+        <h2 class="card-title">My Created Events</h2>
+        <a href="{% url 'create_event' %}" class="btn btn-primary">➕ Create New Event</a>
+    </div>
+    <div class="card-body">
+        {% if upcoming_events_list %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Event Name</th>
+                        <th>Date</th>
+                        <th>Dorm</th>
+                        <th>DC Status</th>
+                        <th>AD Status</th>
+                        <th>RES Status</th>
+                        <th>EHS Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in upcoming_events_list %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'event' event.id %}">{{ event.event_name }}</a>
+                        </td>
+                        <td>{{ event.start_time|date:"M d, Y" }}</td>
+                        <td>{{ event.dorm }}</td>
+                        <td>
+                            <span class="status-badge status-{% if event.dc_status == 'AP' %}approved{% elif event.dc_status == 'DE' %}denied{% elif event.dc_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                                {{ event.get_dc_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-{% if event.ad_status == 'AP' %}approved{% elif event.ad_status == 'DE' %}denied{% elif event.ad_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                                {{ event.get_ad_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-{% if event.res_status == 'AP' %}approved{% elif event.res_status == 'DE' %}denied{% elif event.res_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                                {{ event.get_res_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-{% if event.ehs_status == 'AP' %}approved{% elif event.ehs_status == 'DE' %}denied{% elif event.ehs_status == 'FL' %}flagged{% else %}pending{% endif %}">
+                                {{ event.get_ehs_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'event-update' event.pk %}" class="btn btn-primary btn-sm">Edit</a>
+                            <a href="{% url 'event-delete' event.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="text-center" style="padding: 2rem;">
+                <p class="text-muted mb-3">No events created yet.</p>
+                <a href="{% url 'create_event' %}" class="btn btn-primary">Create Your First Event</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

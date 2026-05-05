@@ -1,0 +1,121 @@
+{% load static %}
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}REX Events Management{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="page-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <h2>REX Events</h2>
+            
+            <!-- Main Navigation -->
+            <nav class="nav-section">
+                <div class="nav-section-title">Menu</div>
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a href="{% url 'index' %}" class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+                            Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'myevents' %}" class="nav-link {% if request.resolver_match.url_name == 'myevents' %}active{% endif %}">
+                            My Events
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'create_event' %}" class="nav-link">
+                            ➕ Create Event
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Department-specific Approval Tab -->
+            {% if user_role in approver_roles %}
+            <nav class="nav-section">
+                <div class="nav-section-title">Approvals</div>
+                <ul class="nav-list">
+                    {% if user_role == 'DormCon' %}
+                    <li class="nav-item">
+                        <a href="{% url 'dep_dc' %}" class="nav-link {% if request.resolver_match.url_name == 'dep_dc' %}active{% endif %}">
+                            DormCon Approvals
+                        </a>
+                    </li>
+                    {% elif user_role == 'AD' %}
+                    <li class="nav-item">
+                        <a href="{% url 'dep_ad' %}" class="nav-link {% if request.resolver_match.url_name == 'dep_ad' %}active{% endif %}">
+                            AD Approvals
+                        </a>
+                    </li>
+                    {% elif user_role == 'RES' %}
+                    <li class="nav-item">
+                        <a href="{% url 'dep_res' %}" class="nav-link {% if request.resolver_match.url_name == 'dep_res' %}active{% endif %}">
+                            RES Approvals
+                        </a>
+                    </li>
+                    {% elif user_role == 'EHS' %}
+                    <li class="nav-item">
+                        <a href="{% url 'dep_ehs' %}" class="nav-link {% if request.resolver_match.url_name == 'dep_ehs' %}active{% endif %}">
+                            EHS Approvals
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            <!-- All Events (Admin/Staff only) -->
+            {% if user_role in admin_roles %}
+            <nav class="nav-section">
+                <div class="nav-section-title">Admin</div>
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a href="{% url 'allevents' %}" class="nav-link {% if request.resolver_match.url_name == 'allevents' %}active{% endif %}">
+                            All Events
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <h1 class="header-title">{% block page_title %}{% endblock %}</h1>
+                    <div class="header-actions">
+                        {% if user_role %}
+                        <span style="color: var(--text-secondary);">{{ user_role }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="content">
+                {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

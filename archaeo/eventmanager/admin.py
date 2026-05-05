@@ -2,6 +2,7 @@
 
 from django.contrib import admin
 
-from .models import RexEvent
+from .models import RexEvent, RexUser
 
 admin.site.register(RexEvent)
+admin.site.register(RexUser)
