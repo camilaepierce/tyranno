@@ -90,7 +90,7 @@ eventmanager/
 │   └── eventmanager/
 │       ├── index.html                     # Homepage
 │       ├── detail.html                    # Event details
-│       ├── create_event.html              # Create event form
+│       ├── add.html                      # Create event form
 │       ├── myevents.html                  # User's events
 │       └── allevents.html                 # All events (admin)
 │   └── departments/

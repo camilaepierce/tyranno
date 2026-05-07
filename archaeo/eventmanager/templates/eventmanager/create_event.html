@@ -7,7 +7,7 @@
 {% block content %}
 <div class="card">
     <div class="card-body">
-        <form action="{% url 'create_event' %}" method="post">
+        <form action="{% url 'event-add' %}" method="post">
             {% csrf_token %}
             
             {% if form.non_field_errors %}

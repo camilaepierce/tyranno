@@ -33,6 +33,7 @@ def get_user_context(request):
 class EventCreateView(CreateView):
     model = RexEvent
     form_class = EventForm
+    template_name = "eventmanager/create_event.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -43,6 +44,7 @@ class EventCreateView(CreateView):
 class EventUpdateView(UpdateView):
     model = RexEvent
     form_class = EventForm
+    template_name = "eventmanager/create_event.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
