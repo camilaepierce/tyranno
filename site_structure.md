@@ -20,7 +20,7 @@ All: overall view with statuses of other departments
 ## Student View
 
 <!-- eventmanager / -->
-    new /
+    event / add
     myevents /
 
 New event submission, view submitted events and their statuses. Editable (tbd?), but requires re-approval

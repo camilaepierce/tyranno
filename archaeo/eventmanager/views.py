@@ -158,16 +158,16 @@ def dep_ad(request):
     return HttpResponse(template.render(context, request))
 
 
-def create_event(request):
-    if request.method == "POST":
-        form = EventForm(request.POST)
-        if form.is_valid():
-            event = form.save()
-            return redirect('event', pk=event.pk)
-    else:
-        form = EventForm()
+# def create_event(request):
+#     if request.method == "POST":
+#         form = EventForm(request.POST)
+#         if form.is_valid():
+#             event = form.save()
+#             return redirect('event', pk=event.pk)
+#     else:
+#         form = EventForm()
     
-    template = loader.get_template("eventmanager/create_event.html")
-    context = {"form": form}
-    context.update(get_user_context(request))
-    return HttpResponse(template.render(context, request))
+#     template = loader.get_template("eventmanager/create_event.html")
+#     context = {"form": form}
+#     context.update(get_user_context(request))
+#     return HttpResponse(template.render(context, request))
