@@ -46,7 +46,13 @@ SECRET_KEY = 'django-insecure-akel9unmkziy24u1tv=aut#d5v!%n3hp6z-cbo*#2^0dewk7$h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['tyranno-o3ap.onrender.com']
+ALLOWED_HOSTS = [
+    'tyranno-o3ap.onrender.com',
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '*'  # Allow all for development; restrict in production
+]
 
 
 # Application definition
