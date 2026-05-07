@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 
 
@@ -45,7 +46,7 @@ SECRET_KEY = 'django-insecure-akel9unmkziy24u1tv=aut#d5v!%n3hp6z-cbo*#2^0dewk7$h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['tyranno-o3ap.onrender.com']
 
 
 # Application definition
@@ -90,14 +91,46 @@ TEMPLATES = [
 WSGI_APPLICATION = 'pteryx.wsgi.application'
 
 
+def _build_database_config():
+    database_url = os.environ.get('DATABASE_URL', '').strip()
+    if not database_url:
+        return {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+
+    parsed_url = urlparse(database_url)
+    if parsed_url.scheme not in {'postgres', 'postgresql'}:
+        raise ValueError('DATABASE_URL must use a postgres or postgresql scheme.')
+
+    database_config = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': parsed_url.path.lstrip('/'),
+        'USER': parsed_url.username or '',
+        'PASSWORD': parsed_url.password or '',
+        'HOST': parsed_url.hostname or '',
+        'PORT': str(parsed_url.port or ''),
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
+    }
+
+    query_options = parse_qs(parsed_url.query)
+    sslmode = query_options.get('sslmode', [None])[0]
+    if sslmode:
+        database_config['OPTIONS']['sslmode'] = sslmode
+
+    if not database_config['PORT']:
+        database_config.pop('PORT')
+
+    return database_config
+
+
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': _build_database_config(),
 }
 
 
