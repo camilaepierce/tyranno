@@ -54,6 +54,10 @@ ALLOWED_HOSTS = [
     '*'  # Allow all for development; restrict in production
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://tyranno-o3ap.onrender.com',
+]
+
 
 # Application definition
 
