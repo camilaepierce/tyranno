@@ -47,8 +47,8 @@
                     <p>{{ rexevent.contact_email }}</p>
                 </div>
                 <div class="mb-3">
-                    <label><strong>Email Notifications:</strong></label>
-                    <p>{{ rexevent.email_notif }}</p>
+                    <label><strong>Notification Emails:</strong></label>
+                    <p style="white-space: pre-line;">{{ rexevent.email_notif }}</p>
                 </div>
             </div>
 
@@ -86,21 +86,44 @@
                         </span>
                     </p>
                 </div>
+
+                {% if rexevent.is_fully_approved %}
+                <div class="alert alert-success">
+                    All four departments have approved this event.
+                </div>
+                {% endif %}
+
+                {% if can_approve %}
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h4 style="margin: 0;">Submit Your Approval</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if approval_comment %}
+                        <p><strong>Current comment:</strong> {{ approval_comment }}</p>
+                        {% endif %}
+                        <form action="{% url 'event-approve' rexevent.pk %}" method="post">
+                            {% csrf_token %}
+                            {{ approval_form.as_p }}
+                            <button type="submit" class="btn btn-success">Submit Approval</button>
+                        </form>
+                    </div>
+                </div>
+                {% elif user_role in approver_roles %}
+                <div class="mt-3">
+                    <p class="text-muted">This event is not awaiting your department's approval.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Show edit/delete buttons only if user is the creator -->
-        {% if user_role == 'Student' or user_role == 'DormCon' %}
         <div class="card-footer">
+            <a href="{% url 'index' %}" class="btn btn-secondary">Back</a>
+            {% if can_edit_event %}
             <a href="{% url 'event-update' rexevent.pk %}" class="btn btn-primary">Edit Event</a>
             <a href="{% url 'event-delete' rexevent.pk %}" class="btn btn-danger">Delete Event</a>
-            <a href="{% url 'index' %}" class="btn btn-secondary">Back</a>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="card-footer">
-            <a href="{% url 'index' %}" class="btn btn-secondary">Back</a>
-        </div>
-        {% endif %}
     </div>
 </div>
 {% else %}

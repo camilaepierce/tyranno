@@ -54,8 +54,12 @@
                             </span>
                         </td>
                         <td>
+                            {% if can_edit_event %}
                             <a href="{% url 'event-update' event.pk %}" class="btn btn-primary btn-sm">Edit</a>
                             <a href="{% url 'event-delete' event.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

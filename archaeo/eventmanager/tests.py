@@ -1,10 +1,13 @@
 import datetime
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
-from .models import RexEvent, RexUser
+from .forms import EventForm
+from .models import RexEvent, RexUser, SiteConfiguration
 
 
 class RexEventApprovalTests(TestCase):
@@ -12,43 +15,191 @@ class RexEventApprovalTests(TestCase):
         RexUser.objects.create(username="DormCon User", role="DormCon", email="camilaepierce@gmail.com")
         RexUser.objects.create(username="AD User", role="AD", email="cepierce@mit.edu")
         RexUser.objects.create(username="RES User", role="RES", email="c4p.rsa@gmail.com")
-        RexUser.objects.create(username="EHS User", role="EHS", email="c4p.rsa@gmail.com")
+        RexUser.objects.create(username="EHS User", role="EHS", email="ehs@example.com")
 
-    def _create_event(self):
+    def _create_event(self, **overrides):
         now = timezone.now()
-        return RexEvent.objects.create(
-            event_name="Party",
-            description="Test event",
-            dorm="North",
-            dorm_sub="A",
-            start_time=now,
-            end_time=now + datetime.timedelta(hours=1),
-            email_notif="Updates",
-            location="Lobby",
-            contact_name="Owner",
-            contact_email="owner@example.com",
-        )
+        data = {
+            "event_name": "Party",
+            "description": "Test event",
+            "dorm": "Baker House",
+            "dorm_sub": "A",
+            "start_time": now,
+            "end_time": now + datetime.timedelta(hours=1),
+            "email_notif": "owner@example.com",
+            "location": "Lobby",
+            "contact_name": "Owner",
+            "contact_email": "owner@example.com",
+        }
+        data.update(overrides)
+        return RexEvent.objects.create(**data)
 
-    def test_creating_event_notifies_dormcon(self):
+    def test_creating_event_notifies_dormcon_and_subscribers(self):
         with patch("eventmanager.models.send_mail") as mocked_send_mail:
             self._create_event()
 
-        self.assertEqual(mocked_send_mail.call_count, 1)
-        self.assertEqual(mocked_send_mail.call_args.args[3], ["camilaepierce@gmail.com"])
+        recipients_lists = [call.args[3] for call in mocked_send_mail.call_args_list]
+        self.assertIn(["camilaepierce@gmail.com"], recipients_lists)
+        self.assertIn(["owner@example.com"], recipients_lists)
 
-    def test_approval_advances_to_ad_then_res_and_ehs(self):
+    def test_dormcon_approval_notifies_remaining_departments(self):
         event = self._create_event()
 
         with patch("eventmanager.models.send_mail") as mocked_send_mail:
             event.dc_status = RexEvent.ApprovalStatus.APPROVED
             event.save()
 
-        self.assertEqual(mocked_send_mail.call_count, 1)
-        self.assertEqual(mocked_send_mail.call_args.args[3], ["cepierce@mit.edu"])
+        recipients_lists = [call.args[3] for call in mocked_send_mail.call_args_list]
+        self.assertIn(
+            sorted(["cepierce@mit.edu", "c4p.rsa@gmail.com", "ehs@example.com"]),
+            [sorted(recipients) for recipients in recipients_lists],
+        )
+
+    def test_later_department_approval_notifies_subscribers_only(self):
+        event = self._create_event()
+        event.dc_status = RexEvent.ApprovalStatus.APPROVED
+        event.save()
 
         with patch("eventmanager.models.send_mail") as mocked_send_mail:
             event.ad_status = RexEvent.ApprovalStatus.APPROVED
             event.save()
 
         self.assertEqual(mocked_send_mail.call_count, 1)
-        self.assertEqual(mocked_send_mail.call_args.args[3], ["c4p.rsa@gmail.com"])
+        self.assertEqual(mocked_send_mail.call_args.args[3], ["owner@example.com"])
+
+    def test_event_is_fully_approved_only_when_all_four_approve(self):
+        event = self._create_event()
+        self.assertFalse(event.is_fully_approved())
+
+        event.dc_status = RexEvent.ApprovalStatus.APPROVED
+        event.ad_status = RexEvent.ApprovalStatus.APPROVED
+        event.res_status = RexEvent.ApprovalStatus.APPROVED
+        event.save()
+        self.assertFalse(event.is_fully_approved())
+
+        event.ehs_status = RexEvent.ApprovalStatus.APPROVED
+        event.save()
+        self.assertTrue(event.is_fully_approved())
+
+    def test_editing_event_resets_approvals_and_notifies_dormcon_and_subscribers(self):
+        event = self._create_event()
+        event.dc_status = RexEvent.ApprovalStatus.APPROVED
+        event.ad_status = RexEvent.ApprovalStatus.APPROVED
+        event.save()
+
+        with patch("eventmanager.models.send_mail") as mocked_send_mail:
+            event.description = "Updated description"
+            event.save()
+
+        event.refresh_from_db()
+        self.assertEqual(event.dc_status, RexEvent.ApprovalStatus.PENDING)
+        self.assertEqual(event.ad_status, RexEvent.ApprovalStatus.PENDING)
+        recipients_lists = [call.args[3] for call in mocked_send_mail.call_args_list]
+        self.assertIn(["camilaepierce@gmail.com"], recipients_lists)
+        self.assertIn(["owner@example.com"], recipients_lists)
+
+    def test_dormcon_can_submit_decision(self):
+        event = self._create_event()
+        User.objects.create_user(username="DormCon User", password="pass")
+        self.client.login(username="DormCon User", password="pass")
+
+        response = self.client.post(
+            reverse("event-approve", kwargs={"pk": event.pk}),
+            {"status": RexEvent.ApprovalStatus.APPROVED, "comment": "Looks good"},
+        )
+
+        event.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(event.dc_status, RexEvent.ApprovalStatus.APPROVED)
+        self.assertEqual(event.dc_comment, "Looks good")
+
+    def test_other_departments_cannot_approve_before_dormcon(self):
+        event = self._create_event()
+        User.objects.create_user(username="AD User", password="pass")
+        self.client.login(username="AD User", password="pass")
+
+        response = self.client.post(
+            reverse("event-approve", kwargs={"pk": event.pk}),
+            {"status": RexEvent.ApprovalStatus.APPROVED, "comment": "Too early"},
+        )
+
+        event.refresh_from_db()
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(event.ad_status, RexEvent.ApprovalStatus.PENDING)
+
+    def test_non_approver_cannot_submit_decision(self):
+        event = self._create_event()
+        User.objects.create_user(username="Student User", password="pass")
+        RexUser.objects.create(username="Student User", role="Student", email="student@example.com")
+        self.client.login(username="Student User", password="pass")
+
+        response = self.client.post(
+            reverse("event-approve", kwargs={"pk": event.pk}),
+            {"status": RexEvent.ApprovalStatus.APPROVED, "comment": "Nope"},
+        )
+
+        event.refresh_from_db()
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(event.dc_status, RexEvent.ApprovalStatus.PENDING)
+
+
+class EventFormTests(TestCase):
+    def test_dorm_field_is_dropdown_with_expected_choices(self):
+        form = EventForm()
+        dorm_values = [value for value, _ in form.fields["dorm"].choices if value]
+        self.assertEqual(dorm_values, [choice[0] for choice in RexEvent.DORM_CHOICES])
+
+    def test_email_notif_accepts_multiple_addresses(self):
+        form = EventForm(
+            data={
+                "event_name": "Party",
+                "description": "Test event",
+                "dorm": "Baker House",
+                "dorm_sub": "A",
+                "start_time": timezone.now(),
+                "end_time": timezone.now() + datetime.timedelta(hours=1),
+                "email_notif": "one@example.com\ntwo@example.com",
+                "location": "Lobby",
+                "contact_name": "Owner",
+                "contact_email": "owner@example.com",
+            }
+        )
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["email_notif"], "one@example.com\ntwo@example.com")
+
+
+class EventEditingPermissionTests(TestCase):
+    def setUp(self):
+        self.creator = RexUser.objects.create(
+            username="Creator",
+            role="Student",
+            email="creator@example.com",
+        )
+        User.objects.create_user(username="Creator", password="pass")
+        self.event = RexEvent.objects.create(
+            event_name="Party",
+            description="Test event",
+            dorm="Simmons Hall",
+            dorm_sub="A",
+            start_time=timezone.now(),
+            end_time=timezone.now() + datetime.timedelta(hours=1),
+            email_notif="creator@example.com",
+            location="Lobby",
+            contact_name="Owner",
+            contact_email="owner@example.com",
+            created_by=self.creator,
+        )
+
+    def test_creator_can_edit_their_event(self):
+        self.client.login(username="Creator", password="pass")
+        response = self.client.get(reverse("event-update", kwargs={"pk": self.event.pk}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_admin_can_disable_event_editing(self):
+        config = SiteConfiguration.load()
+        config.allow_event_editing = False
+        config.save()
+
+        self.client.login(username="Creator", password="pass")
+        response = self.client.get(reverse("event-update", kwargs={"pk": self.event.pk}))
+        self.assertEqual(response.status_code, 403)

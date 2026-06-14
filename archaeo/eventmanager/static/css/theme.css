@@ -355,6 +355,18 @@ a:hover {
   margin-bottom: var(--spacing-lg);
 }
 
+.help-text {
+  margin-top: var(--spacing-xs);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+textarea {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+}
+
 label {
   display: block;
   margin-bottom: var(--spacing-sm);

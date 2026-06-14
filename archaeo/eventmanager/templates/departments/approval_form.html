@@ -1,0 +1,16 @@
+<form action="{% url 'event-approve' event.pk %}" method="post" class="approval-form">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="status-{{ event.pk }}"><strong>Decision</strong></label>
+        <select name="status" id="status-{{ event.pk }}" class="form-control" required>
+            <option value="AP">Approved</option>
+            <option value="DE">Denied</option>
+            <option value="FL">Flagged</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="comment-{{ event.pk }}"><strong>Comment</strong></label>
+        <textarea name="comment" id="comment-{{ event.pk }}" class="form-control" rows="3" placeholder="Optional notes for this decision"></textarea>
+    </div>
+    <button type="submit" class="btn btn-success">Submit Approval</button>
+</form>

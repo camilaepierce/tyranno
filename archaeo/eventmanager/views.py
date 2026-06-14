@@ -1,19 +1,20 @@
+from django.contrib import messages
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.template import loader
 from django.views import generic
 
-from .models import RexEvent, RexUser
+from .models import RexEvent, RexUser, SiteConfiguration
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
-from .forms import EventForm
+from .forms import EventForm, ApprovalForm
 
 
 def get_user_context(request):
     """Get user role and context information"""
     user_role = None
+    rex_user = None
     if hasattr(request, 'user') and request.user.is_authenticated:
-        # Try to get role from RexUser model
         try:
             rex_user = RexUser.objects.get(username=request.user.username)
             user_role = rex_user.role
@@ -22,12 +23,57 @@ def get_user_context(request):
     
     approver_roles = ['DormCon', 'AD', 'RES', 'EHS']
     admin_roles = ['DormCon', 'AD']
+    site_config = SiteConfiguration.load()
     
     return {
         'user_role': user_role,
+        'rex_user': rex_user,
         'approver_roles': approver_roles,
         'admin_roles': admin_roles,
+        'event_editing_enabled': site_config.allow_event_editing,
     }
+
+
+def _get_rex_user(request):
+    if hasattr(request, 'user') and request.user.is_authenticated:
+        try:
+            return RexUser.objects.get(username=request.user.username)
+        except RexUser.DoesNotExist:
+            return None
+    return None
+
+
+def _add_approval_context(context, event, user_role):
+    if not user_role or not event.role_can_approve(user_role):
+        return
+
+    status_field, comment_field = RexEvent.ROLE_TO_APPROVAL[user_role]
+    context['approval_form'] = ApprovalForm()
+    context['can_approve'] = True
+    context['approval_status_field'] = status_field
+    context['approval_comment'] = getattr(event, comment_field)
+
+
+def _user_can_edit_event(rex_user, event, editing_enabled):
+    return (
+        editing_enabled
+        and rex_user is not None
+        and event.created_by_id == rex_user.pk
+    )
+
+
+def _add_edit_context(context, event, rex_user, editing_enabled):
+    context['can_edit_event'] = _user_can_edit_event(rex_user, event, editing_enabled)
+
+
+class EventEditPermissionMixin:
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        rex_user = _get_rex_user(request)
+        site_config = SiteConfiguration.load()
+        if not _user_can_edit_event(rex_user, self.object, site_config.allow_event_editing):
+            return HttpResponseForbidden("You do not have permission to modify this event.")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class EventCreateView(CreateView):
@@ -40,8 +86,14 @@ class EventCreateView(CreateView):
         context.update(get_user_context(self.request))
         return context
 
+    def form_valid(self, form):
+        rex_user = _get_rex_user(self.request)
+        if rex_user:
+            form.instance.created_by = rex_user
+        return super().form_valid(form)
 
-class EventUpdateView(UpdateView):
+
+class EventUpdateView(EventEditPermissionMixin, UpdateView):
     model = RexEvent
     form_class = EventForm
     template_name = "eventmanager/create_event.html"
@@ -52,7 +104,7 @@ class EventUpdateView(UpdateView):
         return context
 
 
-class EventDeleteView(DeleteView):
+class EventDeleteView(EventEditPermissionMixin, DeleteView):
     model = RexEvent
     success_url = reverse_lazy("index")
 
@@ -67,7 +119,6 @@ class IndexView(generic.ListView):
     context_object_name = "upcoming_events_list"
     
     def get_queryset(self):
-        """Return the last five published questions."""
         return RexEvent.objects.order_by("-start_time")[:5]
 
     def get_context_data(self, **kwargs):
@@ -83,16 +134,64 @@ class DetailView(generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(get_user_context(self.request))
+        _add_approval_context(context, self.object, context.get('user_role'))
+        _add_edit_context(
+            context,
+            self.object,
+            context.get('rex_user'),
+            context.get('event_editing_enabled', True),
+        )
         return context
 
 
+def approve_event(request, pk):
+    event = get_object_or_404(RexEvent, pk=pk)
+    user_context = get_user_context(request)
+    user_role = user_context.get('user_role')
+    approval_mapping = RexEvent.ROLE_TO_APPROVAL.get(user_role)
+
+    if not approval_mapping or not event.role_can_approve(user_role):
+        return HttpResponseForbidden("You do not have permission to approve this event.")
+
+    status_field, comment_field = approval_mapping
+
+    if request.method != 'POST':
+        return redirect('event', pk=pk)
+
+    form = ApprovalForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Please correct the errors in your approval submission.")
+        return redirect('event', pk=pk)
+
+    setattr(event, status_field, form.cleaned_data['status'])
+    setattr(event, comment_field, form.cleaned_data['comment'])
+    event.save()
+
+    messages.success(request, f"Approval updated for {event.event_name}.")
+    return redirect(_approval_redirect_name(user_role))
+
+
+def _approval_redirect_name(user_role):
+    return {
+        'DormCon': 'dep_dc',
+        'AD': 'dep_ad',
+        'RES': 'dep_res',
+        'EHS': 'dep_ehs',
+    }.get(user_role, 'index')
+
+
 def myevents(request):
+    rex_user = _get_rex_user(request)
+    user_context = get_user_context(request)
     upcoming_events = RexEvent.objects.order_by("-start_time")
+    if rex_user:
+        upcoming_events = upcoming_events.filter(created_by=rex_user)
     template = loader.get_template("eventmanager/myevents.html")
     context = {
-        "upcoming_events_list": upcoming_events
+        "upcoming_events_list": upcoming_events,
+        "can_edit_event": user_context.get("event_editing_enabled", True),
     }
-    context.update(get_user_context(request))
+    context.update(user_context)
     return HttpResponse(template.render(context, request))
 
 
@@ -128,7 +227,10 @@ def dep_dc(request):
 
 
 def dep_res(request):
-    upcoming_events = RexEvent.objects.filter(res_status__in=['PE', 'FL']).order_by("-start_time")
+    upcoming_events = RexEvent.objects.filter(
+        dc_status='AP',
+        res_status__in=['PE', 'FL'],
+    ).order_by("-start_time")
     template = loader.get_template("departments/res/pending.html")
     context = {
         "upcoming_events_list": upcoming_events,
@@ -139,7 +241,10 @@ def dep_res(request):
 
 
 def dep_ehs(request):
-    upcoming_events = RexEvent.objects.filter(ehs_status__in=['PE', 'FL']).order_by("-start_time")
+    upcoming_events = RexEvent.objects.filter(
+        dc_status='AP',
+        ehs_status__in=['PE', 'FL'],
+    ).order_by("-start_time")
     template = loader.get_template("departments/ehs/pending.html")
     context = {
         "upcoming_events_list": upcoming_events,
@@ -150,7 +255,10 @@ def dep_ehs(request):
 
 
 def dep_ad(request):
-    upcoming_events = RexEvent.objects.filter(ad_status__in=['PE', 'FL']).order_by("-start_time")
+    upcoming_events = RexEvent.objects.filter(
+        dc_status='AP',
+        ad_status__in=['PE', 'FL'],
+    ).order_by("-start_time")
     template = loader.get_template("departments/ad/pending.html")
     context = {
         "upcoming_events_list": upcoming_events,
@@ -158,18 +266,3 @@ def dep_ad(request):
     }
     context.update(get_user_context(request))
     return HttpResponse(template.render(context, request))
-
-
-# def create_event(request):
-#     if request.method == "POST":
-#         form = EventForm(request.POST)
-#         if form.is_valid():
-#             event = form.save()
-#             return redirect('event', pk=event.pk)
-#     else:
-#         form = EventForm()
-    
-#     template = loader.get_template("eventmanager/create_event.html")
-#     context = {"form": form}
-#     context.update(get_user_context(request))
-#     return HttpResponse(template.render(context, request))

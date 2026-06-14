@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Create Event - REX Events{% endblock %}
-{% block page_title %}Create New Event{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit Event{% else %}Create Event{% endif %} - REX Events{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Event{% else %}Create New Event{% endif %}{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-body">
-        <form action="{% url 'event-add' %}" method="post">
+        <form action="{% if form.instance.pk %}{% url 'event-update' form.instance.pk %}{% else %}{% url 'event-add' %}{% endif %}" method="post">
             {% csrf_token %}
             
             {% if form.non_field_errors %}
@@ -20,10 +20,19 @@
             </div>
             {% endif %}
 
+            {% if form.instance.pk %}
+            <div class="alert alert-warning">
+                Editing an event resets all approval statuses. DormCon is notified first, then the other departments after DormCon approves.
+            </div>
+            {% endif %}
+
             {% for field in form %}
             <div class="form-group">
                 {{ field.label_tag }}
                 {{ field }}
+                {% if field.help_text %}
+                <p class="help-text">{{ field.help_text }}</p>
+                {% endif %}
                 {% if field.errors %}
                 <ul class="errorlist">
                     {% for error in field.errors %}
@@ -35,8 +44,8 @@
             {% endfor %}
 
             <div class="card-footer" style="margin-top: 2rem;">
-                <button type="submit" class="btn btn-primary">Submit Event</button>
-                <a href="{% url 'index' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Submit Changes{% else %}Submit Event{% endif %}</button>
+                <a href="{% if form.instance.pk %}{% url 'event' form.instance.pk %}{% else %}{% url 'index' %}{% endif %}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>

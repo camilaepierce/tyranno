@@ -4,62 +4,36 @@ from django.db import migrations, models
 
 
 def combine_date_and_time(apps, schema_editor):
-    """Combine separate date/time fields into a single datetime field."""
     if schema_editor.connection.vendor != 'postgresql':
         return
-    
+
     with schema_editor.connection.cursor() as cursor:
-        # Create temporary columns to hold the converted datetimes
         cursor.execute("ALTER TABLE eventmanager_rexevent ADD COLUMN start_time_new TIMESTAMP WITH TIME ZONE;")
         cursor.execute("ALTER TABLE eventmanager_rexevent ADD COLUMN end_time_new TIMESTAMP WITH TIME ZONE;")
-        
-        # Combine start_date + start_time into the new column
         cursor.execute("""
-            UPDATE eventmanager_rexevent 
-            SET start_time_new = 
-                CASE 
-                    WHEN start_date IS NOT NULL THEN 
-                        (start_date::timestamp + start_time::interval) AT TIME ZONE 'UTC'
+            UPDATE eventmanager_rexevent
+            SET start_time_new =
+                CASE
+                    WHEN start_date IS NOT NULL THEN (start_date::timestamp + start_time::interval) AT TIME ZONE 'UTC'
                     ELSE NOW()
-                END;
+                END
         """)
-        
-        # Combine end_date + end_time into the new column
         cursor.execute("""
-            UPDATE eventmanager_rexevent 
-            SET end_time_new = 
-                CASE 
-                    WHEN end_date IS NOT NULL THEN 
-                        (end_date::timestamp + end_time::interval) AT TIME ZONE 'UTC'
+            UPDATE eventmanager_rexevent
+            SET end_time_new =
+                CASE
+                    WHEN end_date IS NOT NULL THEN (end_date::timestamp + end_time::interval) AT TIME ZONE 'UTC'
                     ELSE NOW()
-                END;
+                END
         """)
-        
-        # For any remaining NULLs, set to now
-        cursor.execute("""
-            UPDATE eventmanager_rexevent 
-            SET start_time_new = NOW() WHERE start_time_new IS NULL;
-        """)
-        
-        cursor.execute("""
-            UPDATE eventmanager_rexevent 
-            SET end_time_new = NOW() WHERE end_time_new IS NULL;
-        """)
-        
-        # Drop the old columns
+        cursor.execute("UPDATE eventmanager_rexevent SET start_time_new = NOW() WHERE start_time_new IS NULL;")
+        cursor.execute("UPDATE eventmanager_rexevent SET end_time_new = NOW() WHERE end_time_new IS NULL;")
         cursor.execute("ALTER TABLE eventmanager_rexevent DROP COLUMN start_date;")
         cursor.execute("ALTER TABLE eventmanager_rexevent DROP COLUMN end_date;")
         cursor.execute("ALTER TABLE eventmanager_rexevent DROP COLUMN start_time;")
         cursor.execute("ALTER TABLE eventmanager_rexevent DROP COLUMN end_time;")
-        
-        # Rename new columns to original names
         cursor.execute("ALTER TABLE eventmanager_rexevent RENAME COLUMN start_time_new TO start_time;")
         cursor.execute("ALTER TABLE eventmanager_rexevent RENAME COLUMN end_time_new TO end_time;")
-
-
-def reverse_combine(apps, schema_editor):
-    """This cannot be cleanly reversed without data loss."""
-    pass
 
 
 class Migration(migrations.Migration):
@@ -69,5 +43,29 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(combine_date_and_time, reverse_combine),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunPython(combine_date_and_time, migrations.RunPython.noop),
+            ],
+            state_operations=[
+                migrations.RemoveField(
+                    model_name='rexevent',
+                    name='end_date',
+                ),
+                migrations.RemoveField(
+                    model_name='rexevent',
+                    name='start_date',
+                ),
+                migrations.AlterField(
+                    model_name='rexevent',
+                    name='end_time',
+                    field=models.DateTimeField(),
+                ),
+                migrations.AlterField(
+                    model_name='rexevent',
+                    name='start_time',
+                    field=models.DateTimeField(),
+                ),
+            ],
+        ),
     ]
