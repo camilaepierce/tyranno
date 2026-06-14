@@ -68,8 +68,35 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'eventmanager.apps.EventmanagerConfig'
+    'eventmanager.apps.EventmanagerConfig',
 ]
+
+OIDC_RP_CLIENT_ID = os.environ.get('OIDC_RP_CLIENT_ID', '').strip()
+OIDC_RP_CLIENT_SECRET = os.environ.get('OIDC_RP_CLIENT_SECRET', '').strip()
+OIDC_ENABLED = bool(OIDC_RP_CLIENT_ID and OIDC_RP_CLIENT_SECRET)
+
+if OIDC_ENABLED:
+    INSTALLED_APPS.insert(INSTALLED_APPS.index('django.contrib.auth') + 1, 'mozilla_django_oidc')
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+if OIDC_ENABLED:
+    AUTHENTICATION_BACKENDS.insert(0, 'eventmanager.auth.PetrockOIDCBackend')
+
+PETROCK_ISSUER = 'https://petrock.mit.edu'
+OIDC_OP_AUTHORIZATION_ENDPOINT = f'{PETROCK_ISSUER}/touchstone/oidc/authorization'
+OIDC_OP_TOKEN_ENDPOINT = f'{PETROCK_ISSUER}/oidc/token'
+OIDC_OP_USER_ENDPOINT = f'{PETROCK_ISSUER}/oidc/userinfo'
+OIDC_OP_JWKS_ENDPOINT = f'{PETROCK_ISSUER}/oidc/jwks'
+OIDC_RP_SCOPES = 'openid email profile'
+OIDC_RP_SIGN_ALGO = 'RS256'
+OIDC_TOKEN_USE_BASIC_AUTH = True
+OIDC_VERIFY_SSL = True
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = 'oidc_authentication_init' if OIDC_ENABLED else '/admin/login/'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -80,6 +107,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+if OIDC_ENABLED:
+    MIDDLEWARE.append('mozilla_django_oidc.middleware.SessionRefresh')
 
 ROOT_URLCONF = 'pteryx.urls'
 
@@ -93,6 +122,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'eventmanager.context_processors.auth_context',
             ],
         },
     },
@@ -180,9 +210,19 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-EMAIL_BACKEND = 'eventmanager.mail_backends.GmailAPIMailBackend'
-GMAIL_SERVICE_ACCOUNT_JSON_B64 = os.environ.get('GMAIL_SERVICE_ACCOUNT_JSON_B64', '')
-GMAIL_SERVICE_ACCOUNT_JSON = os.environ.get('GMAIL_SERVICE_ACCOUNT_JSON', '')
-GMAIL_DELEGATED_USER_EMAIL = os.environ.get('GMAIL_DELEGATED_USER_EMAIL', 'mit.rex.events@gmail.com')
-DEFAULT_FROM_EMAIL = GMAIL_DELEGATED_USER_EMAIL
+# Outbound notification email (separate from Petrock/Touchstone user login).
+from eventmanager.email_settings import resolve_email_backend
+
+GMAIL_SENDER_EMAIL = os.environ.get('GMAIL_SENDER_EMAIL', 'mit.rex.events@gmail.com').strip()
+GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
+DEFAULT_FROM_EMAIL = GMAIL_SENDER_EMAIL
+EMAIL_BACKEND = resolve_email_backend(
+    gmail_app_password=GMAIL_APP_PASSWORD,
+    debug=DEBUG,
+)
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = GMAIL_SENDER_EMAIL
+EMAIL_HOST_PASSWORD = GMAIL_APP_PASSWORD
 

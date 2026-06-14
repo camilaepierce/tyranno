@@ -27,20 +27,16 @@
             {% endif %}
 
             {% for field in form %}
-            <div class="form-group">
-                {{ field.label_tag }}
-                {{ field }}
-                {% if field.help_text %}
-                <p class="help-text">{{ field.help_text }}</p>
+                {% if field.name == 'event_date' %}
+                <div class="form-row form-row-schedule">
+                    {% include 'eventmanager/_form_field.html' with field=form.event_date %}
+                    {% include 'eventmanager/_form_field.html' with field=form.event_start_time %}
+                    {% include 'eventmanager/_form_field.html' with field=form.event_end_time %}
+                </div>
+                {% elif field.name == 'event_start_time' or field.name == 'event_end_time' %}
+                {% else %}
+                {% include 'eventmanager/_form_field.html' with field=field %}
                 {% endif %}
-                {% if field.errors %}
-                <ul class="errorlist">
-                    {% for error in field.errors %}
-                    <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </div>
             {% endfor %}
 
             <div class="card-footer" style="margin-top: 2rem;">

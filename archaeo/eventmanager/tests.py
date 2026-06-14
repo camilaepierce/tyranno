@@ -150,14 +150,16 @@ class EventFormTests(TestCase):
         self.assertEqual(dorm_values, [choice[0] for choice in RexEvent.DORM_CHOICES])
 
     def test_email_notif_accepts_multiple_addresses(self):
+        now = timezone.now()
         form = EventForm(
             data={
                 "event_name": "Party",
                 "description": "Test event",
                 "dorm": "Baker House",
                 "dorm_sub": "A",
-                "start_time": timezone.now(),
-                "end_time": timezone.now() + datetime.timedelta(hours=1),
+                "event_date": now.date().isoformat(),
+                "event_start_time": now.strftime("%H:%M"),
+                "event_end_time": (now + datetime.timedelta(hours=1)).strftime("%H:%M"),
                 "email_notif": "one@example.com\ntwo@example.com",
                 "location": "Lobby",
                 "contact_name": "Owner",
@@ -166,6 +168,26 @@ class EventFormTests(TestCase):
         )
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["email_notif"], "one@example.com\ntwo@example.com")
+
+    def test_end_time_must_be_after_start_time(self):
+        now = timezone.now()
+        form = EventForm(
+            data={
+                "event_name": "Party",
+                "description": "Test event",
+                "dorm": "Baker House",
+                "dorm_sub": "A",
+                "event_date": now.date().isoformat(),
+                "event_start_time": "18:00",
+                "event_end_time": "17:00",
+                "email_notif": "one@example.com",
+                "location": "Lobby",
+                "contact_name": "Owner",
+                "contact_email": "owner@example.com",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("event_end_time", form.errors)
 
 
 class EventEditingPermissionTests(TestCase):
@@ -203,3 +225,67 @@ class EventEditingPermissionTests(TestCase):
         self.client.login(username="Creator", password="pass")
         response = self.client.get(reverse("event-update", kwargs={"pk": self.event.pk}))
         self.assertEqual(response.status_code, 403)
+
+
+class PetrockAuthTests(TestCase):
+    def test_sync_rex_user_creates_student_record(self):
+        from .auth import PetrockOIDCBackend
+
+        backend = PetrockOIDCBackend()
+        user = User.objects.create_user(
+            username="student@mit.edu",
+            email="student@mit.edu",
+        )
+        backend._sync_rex_user(
+            user,
+            {
+                "email": "student@mit.edu",
+                "name": "Test Student",
+                "given_name": "Test",
+                "family_name": "Student",
+            },
+        )
+
+        rex_user = RexUser.objects.get(email="student@mit.edu")
+        self.assertEqual(rex_user.role, "Student")
+        self.assertEqual(rex_user.username, "Test Student")
+
+    def test_get_rex_user_matches_by_email(self):
+        from .views import _get_rex_user
+
+        RexUser.objects.create(
+            username="AD User",
+            role="AD",
+            email="ad@mit.edu",
+        )
+        user = User.objects.create_user(
+            username="different-username",
+            email="ad@mit.edu",
+        )
+
+        class Request:
+            pass
+
+        request = Request()
+        request.user = user
+
+        rex_user = _get_rex_user(request)
+        self.assertEqual(rex_user.role, "AD")
+
+
+class EmailSettingsTests(TestCase):
+    def test_debug_without_gmail_password_uses_console_backend(self):
+        from .email_settings import resolve_email_backend
+
+        self.assertEqual(
+            resolve_email_backend(gmail_app_password="", debug=True),
+            "django.core.mail.backends.console.EmailBackend",
+        )
+
+    def test_gmail_app_password_uses_smtp_backend(self):
+        from .email_settings import resolve_email_backend
+
+        self.assertEqual(
+            resolve_email_backend(gmail_app_password="abcd efgh ijkl mnop", debug=False),
+            "django.core.mail.backends.smtp.EmailBackend",
+        )

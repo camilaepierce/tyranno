@@ -355,6 +355,31 @@ a:hover {
   margin-bottom: var(--spacing-lg);
 }
 
+.form-row-schedule {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.2fr) minmax(8rem, 1fr) minmax(8rem, 1fr);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-row-schedule .form-group {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .form-row-schedule {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row-schedule .form-group {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .form-row-schedule .form-group:last-child {
+    margin-bottom: 0;
+  }
+}
+
 .help-text {
   margin-top: var(--spacing-xs);
   color: var(--text-secondary);
@@ -377,6 +402,8 @@ label {
 input[type="text"],
 input[type="email"],
 input[type="password"],
+input[type="date"],
+input[type="time"],
 input[type="datetime-local"],
 input[type="number"],
 textarea,
@@ -393,6 +420,8 @@ select {
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
 input[type="datetime-local"]:focus,
 input[type="number"]:focus,
 textarea:focus,

@@ -92,8 +92,25 @@
                 <div class="header-content">
                     <h1 class="header-title">{% block page_title %}{% endblock %}</h1>
                     <div class="header-actions">
-                        {% if user_role %}
-                        <span style="color: var(--text-secondary);">{{ user_role }}</span>
+                        {% if user.is_authenticated %}
+                            {% if user.get_full_name %}
+                            <span style="color: var(--text-secondary);">{{ user.get_full_name }}</span>
+                            {% elif user.email %}
+                            <span style="color: var(--text-secondary);">{{ user.email }}</span>
+                            {% endif %}
+                            {% if user_role %}
+                            <span style="color: var(--text-secondary);">({{ user_role }})</span>
+                            {% endif %}
+                            {% if oidc_enabled %}
+                            <form method="post" action="{% url 'oidc_logout' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary btn-sm">Log out</button>
+                            </form>
+                            {% else %}
+                            <a href="{% url 'admin:logout' %}" class="btn btn-secondary btn-sm">Log out</a>
+                            {% endif %}
+                        {% elif oidc_enabled %}
+                            <a href="{% url 'oidc_authentication_init' %}" class="btn btn-primary btn-sm">Log in with Touchstone</a>
                         {% endif %}
                     </div>
                 </div>

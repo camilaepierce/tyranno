@@ -1,4 +1,6 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, HttpResponseForbidden
 from django.template import loader
@@ -12,19 +14,13 @@ from .forms import EventForm, ApprovalForm
 
 def get_user_context(request):
     """Get user role and context information"""
-    user_role = None
-    rex_user = None
-    if hasattr(request, 'user') and request.user.is_authenticated:
-        try:
-            rex_user = RexUser.objects.get(username=request.user.username)
-            user_role = rex_user.role
-        except RexUser.DoesNotExist:
-            pass
-    
+    rex_user = _get_rex_user(request)
+    user_role = rex_user.role if rex_user else None
+
     approver_roles = ['DormCon', 'AD', 'RES', 'EHS']
     admin_roles = ['DormCon', 'AD']
     site_config = SiteConfiguration.load()
-    
+
     return {
         'user_role': user_role,
         'rex_user': rex_user,
@@ -36,8 +32,14 @@ def get_user_context(request):
 
 def _get_rex_user(request):
     if hasattr(request, 'user') and request.user.is_authenticated:
+        user = request.user
+        if user.email:
+            try:
+                return RexUser.objects.get(email__iexact=user.email)
+            except RexUser.DoesNotExist:
+                pass
         try:
-            return RexUser.objects.get(username=request.user.username)
+            return RexUser.objects.get(username=user.username)
         except RexUser.DoesNotExist:
             return None
     return None
@@ -76,7 +78,7 @@ class EventEditPermissionMixin:
         return super().dispatch(request, *args, **kwargs)
 
 
-class EventCreateView(CreateView):
+class EventCreateView(LoginRequiredMixin, CreateView):
     model = RexEvent
     form_class = EventForm
     template_name = "eventmanager/create_event.html"
@@ -93,7 +95,7 @@ class EventCreateView(CreateView):
         return super().form_valid(form)
 
 
-class EventUpdateView(EventEditPermissionMixin, UpdateView):
+class EventUpdateView(EventEditPermissionMixin, LoginRequiredMixin, UpdateView):
     model = RexEvent
     form_class = EventForm
     template_name = "eventmanager/create_event.html"
@@ -104,7 +106,7 @@ class EventUpdateView(EventEditPermissionMixin, UpdateView):
         return context
 
 
-class EventDeleteView(EventEditPermissionMixin, DeleteView):
+class EventDeleteView(EventEditPermissionMixin, LoginRequiredMixin, DeleteView):
     model = RexEvent
     success_url = reverse_lazy("index")
 
@@ -144,6 +146,7 @@ class DetailView(generic.DetailView):
         return context
 
 
+@login_required
 def approve_event(request, pk):
     event = get_object_or_404(RexEvent, pk=pk)
     user_context = get_user_context(request)
@@ -180,6 +183,7 @@ def _approval_redirect_name(user_role):
     }.get(user_role, 'index')
 
 
+@login_required
 def myevents(request):
     rex_user = _get_rex_user(request)
     user_context = get_user_context(request)
@@ -195,6 +199,7 @@ def myevents(request):
     return HttpResponse(template.render(context, request))
 
 
+@login_required
 def allevents(request):
     upcoming_events = RexEvent.objects.order_by("-start_time")
     template = loader.get_template("eventmanager/allevents.html")
@@ -205,6 +210,7 @@ def allevents(request):
     return HttpResponse(template.render(context, request))
 
 
+@login_required
 def departments_all(request):
     upcoming_events = RexEvent.objects.order_by("-start_time")
     template = loader.get_template("departments/all.html")
@@ -215,6 +221,7 @@ def departments_all(request):
     return HttpResponse(template.render(context, request))
 
 
+@login_required
 def dep_dc(request):
     upcoming_events = RexEvent.objects.filter(dc_status__in=['PE', 'FL']).order_by("-start_time")
     template = loader.get_template("departments/dc/pending.html")
@@ -226,6 +233,7 @@ def dep_dc(request):
     return HttpResponse(template.render(context, request))
 
 
+@login_required
 def dep_res(request):
     upcoming_events = RexEvent.objects.filter(
         dc_status='AP',
@@ -240,6 +248,7 @@ def dep_res(request):
     return HttpResponse(template.render(context, request))
 
 
+@login_required
 def dep_ehs(request):
     upcoming_events = RexEvent.objects.filter(
         dc_status='AP',
@@ -254,6 +263,7 @@ def dep_ehs(request):
     return HttpResponse(template.render(context, request))
 
 
+@login_required
 def dep_ad(request):
     upcoming_events = RexEvent.objects.filter(
         dc_status='AP',
