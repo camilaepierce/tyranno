@@ -37,26 +37,45 @@ def _load_env_file(env_path):
 _load_env_file(BASE_DIR / ".env")
 
 
+def _env_bool(name, default=False):
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _env_list(name, default=None):
+    raw_value = os.environ.get(name, '').strip()
+    if raw_value:
+        return [item.strip() for item in raw_value.split(',') if item.strip()]
+    return list(default or [])
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-akel9unmkziy24u1tv=aut#d5v!%n3hp6z-cbo*#2^0dewk7$h'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env_bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = [
-    'tyranno-o3ap.onrender.com',
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    '*'  # Allow all for development; restrict in production
-]
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('SECRET_KEY', '').strip()
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-akel9unmkziy24u1tv=aut#d5v!%n3hp6z-cbo*#2^0dewk7$h'
+    else:
+        raise ValueError('SECRET_KEY must be set when DEBUG is false.')
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://tyranno-o3ap.onrender.com',
-]
+ALLOWED_HOSTS = _env_list(
+    'ALLOWED_HOSTS',
+    default=['trexdormcon.com', 'www.trexdormcon.com', 'localhost', '127.0.0.1'],
+)
+
+CSRF_TRUSTED_ORIGINS = _env_list(
+    'CSRF_TRUSTED_ORIGINS',
+    default=['https://trexdormcon.com', 'https://www.trexdormcon.com'],
+)
+
+SITE_URL = os.environ.get('SITE_URL', 'https://trexdormcon.com').strip().rstrip('/')
 
 
 # Application definition
@@ -95,11 +114,12 @@ OIDC_TOKEN_USE_BASIC_AUTH = True
 OIDC_VERIFY_SSL = True
 
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/logged-out/'
 LOGIN_URL = 'oidc_authentication_init' if OIDC_ENABLED else '/admin/login/'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -209,6 +229,24 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+if DEBUG:
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
+else:
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # Outbound notification email (separate from Petrock/Touchstone user login).
 from eventmanager.email_settings import resolve_email_backend

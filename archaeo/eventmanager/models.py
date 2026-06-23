@@ -149,6 +149,9 @@ class RexEvent(models.Model):
         status = getattr(self, status_field)
         return status in (self.ApprovalStatus.PENDING, self.ApprovalStatus.FLAGGED)
 
+    def event_absolute_url(self):
+        return f"{settings.SITE_URL}{reverse('event', kwargs={'pk': self.pk})}"
+
     def _notify_roles(self, roles):
         recipients = list(
             dict.fromkeys(
@@ -170,7 +173,7 @@ class RexEvent(models.Model):
                 f"Subsection: {self.dorm_sub}\n"
                 f"Location: {self.location}\n"
                 f"Contact: {self.contact_name} <{self.contact_email}>\n"
-                f"Review it here: {reverse('event', kwargs={'pk': self.pk})}\n"
+                f"Review it here: {self.event_absolute_url()}\n"
             ),
             recipients,
         )
@@ -237,7 +240,7 @@ class RexEvent(models.Model):
                 (
                     f"The event {self.event_name} was {'submitted' if is_new else 'updated'}.\n\n"
                     f"All approval statuses have been reset to pending.\n"
-                    f"View details: {reverse('event', kwargs={'pk': self.pk})}\n"
+                    f"View details: {self.event_absolute_url()}\n"
                 ),
             )
         elif approval_only_change and current_stage and current_stage != previous_stage:
@@ -260,7 +263,7 @@ class RexEvent(models.Model):
                     (
                         f"Approval statuses changed for {self.event_name}:\n"
                         f"{chr(10).join(changed_statuses)}\n\n"
-                        f"View details: {reverse('event', kwargs={'pk': self.pk})}\n"
+                        f"View details: {self.event_absolute_url()}\n"
                     ),
                 )
 
@@ -272,7 +275,7 @@ class RexEvent(models.Model):
                     f"Event approved: {self.event_name}",
                     (
                         f"All required approvals have been received for {self.event_name}.\n\n"
-                        f"View details: {reverse('event', kwargs={'pk': self.pk})}\n"
+                        f"View details: {self.event_absolute_url()}\n"
                     ),
                     recipients,
                 )

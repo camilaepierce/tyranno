@@ -1,9 +1,12 @@
+from django.contrib.auth.views import LogoutView
 from django.urls import path
 
 from . import views
 
 urlpatterns = [
     path("", views.IndexView.as_view(), name="index"),
+    path("logout/", LogoutView.as_view(), name="logout"),
+    path("logged-out/", views.logged_out, name="logged_out"),
     # path("new", views.create_event, name="create_event"),
     path("myevents", views.myevents, name="myevents"),
     path("all", views.allevents, name="allevents"),

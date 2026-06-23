@@ -116,6 +116,14 @@ class EventDeleteView(EventEditPermissionMixin, LoginRequiredMixin, DeleteView):
         return context
 
 
+def logged_out(request):
+    if request.user.is_authenticated:
+        return redirect("index")
+
+    context = get_user_context(request)
+    return render(request, "eventmanager/logged_out.html", context)
+
+
 class IndexView(generic.ListView):
     template_name = "eventmanager/index.html"
     context_object_name = "upcoming_events_list"

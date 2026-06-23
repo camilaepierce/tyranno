@@ -21,7 +21,8 @@ Petrock (Touchstone) login
 
 Register the app at https://forms.gle/VirozJ8tRZK2hBax9 and add these redirect URLs:
 
-- `https://tyranno-o3ap.onrender.com/oidc/callback/`
+- `https://trexdormcon.com/oidc/callback/`
+- `https://www.trexdormcon.com/oidc/callback/` (if using www)
 - `http://localhost:4000/oidc/callback/` (local development)
 
 Add the credentials Petrock emails you to `.env`:
@@ -49,7 +50,36 @@ GMAIL_APP_PASSWORD=your-16-character-app-password
 
 When `GMAIL_APP_PASSWORD` is not set, local development prints emails to the console instead of sending them.
 
-python3 manage.py migrate
+Production deployment (Render)
+
+Production URL: https://trexdormcon.com
+
+Set these environment variables on Render:
+
+```
+DEBUG=false
+SECRET_KEY=<django-secret-key>
+DATABASE_URL=<neon-postgres-url>
+SITE_URL=https://trexdormcon.com
+ALLOWED_HOSTS=trexdormcon.com,www.trexdormcon.com
+CSRF_TRUSTED_ORIGINS=https://trexdormcon.com,https://www.trexdormcon.com
+OIDC_RP_CLIENT_ID=...
+OIDC_RP_CLIENT_SECRET=...
+GMAIL_SENDER_EMAIL=mit.rex.events@gmail.com
+GMAIL_APP_PASSWORD=...
+```
+
+Render uses Gunicorn (see `render.yaml`) and runs `collectstatic` at build time. WhiteNoise serves static assets in production.
+
+After deploying, run migrations and create approver `RexUser` records in Django admin. Notification emails link to event pages using `SITE_URL`.
+
+Local development
+
+```
+cd archaeo
+python manage.py migrate
+python manage.py runserver 0.0.0.0:4000
+```
 
 Site to streamline REX event submissions.
 

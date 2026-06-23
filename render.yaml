@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: tyranno
+    runtime: python
+    buildCommand: pip install -r requirements.txt && cd archaeo && python manage.py collectstatic --noinput
+    startCommand: cd archaeo && gunicorn pteryx.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DEBUG
+        value: "false"
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SITE_URL
+        value: https://trexdormcon.com
+      - key: ALLOWED_HOSTS
+        value: trexdormcon.com,www.trexdormcon.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://trexdormcon.com,https://www.trexdormcon.com

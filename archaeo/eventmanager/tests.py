@@ -2,7 +2,7 @@ import datetime
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -41,6 +41,15 @@ class RexEventApprovalTests(TestCase):
         recipients_lists = [call.args[3] for call in mocked_send_mail.call_args_list]
         self.assertIn(["camilaepierce@gmail.com"], recipients_lists)
         self.assertIn(["owner@example.com"], recipients_lists)
+
+    @override_settings(SITE_URL="https://trexdormcon.com")
+    def test_notification_emails_include_absolute_event_url(self):
+        with patch("eventmanager.models.send_mail") as mocked_send_mail:
+            event = self._create_event()
+
+        bodies = [call.args[1] for call in mocked_send_mail.call_args_list]
+        expected_url = f"https://trexdormcon.com/event/{event.pk}"
+        self.assertTrue(any(expected_url in body for body in bodies))
 
     def test_dormcon_approval_notifies_remaining_departments(self):
         event = self._create_event()
@@ -271,6 +280,25 @@ class PetrockAuthTests(TestCase):
 
         rex_user = _get_rex_user(request)
         self.assertEqual(rex_user.role, "AD")
+
+
+class LogoutPageTests(TestCase):
+    def test_logged_out_page_is_public(self):
+        response = self.client.get(reverse("logged_out"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "You have been signed out")
+
+    def test_logged_out_redirects_authenticated_users(self):
+        User.objects.create_user(username="logged-in", password="pass")
+        self.client.login(username="logged-in", password="pass")
+        response = self.client.get(reverse("logged_out"))
+        self.assertRedirects(response, reverse("index"))
+
+    def test_logout_redirects_to_logged_out_page(self):
+        User.objects.create_user(username="logged-in", password="pass")
+        self.client.login(username="logged-in", password="pass")
+        response = self.client.post(reverse("logout"))
+        self.assertRedirects(response, reverse("logged_out"))
 
 
 class EmailSettingsTests(TestCase):
