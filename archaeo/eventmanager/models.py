@@ -3,6 +3,9 @@ from django.core.mail import send_mail
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create your models here.
 class RexUser(models.Model):
@@ -183,12 +186,19 @@ class RexEvent(models.Model):
         if not recipients:
             return
 
-        send_mail(
-            subject,
-            body,
-            getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@localhost"),
-            recipients,
-        )
+        try:
+            send_mail(
+                subject,
+                body,
+                getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@localhost"),
+                recipients,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send notification email %r to %s",
+                subject,
+                recipients,
+            )
 
     def _notify_subscribers(self, subject, body):
         self._send_mail(subject, body, self.notification_emails())

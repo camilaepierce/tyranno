@@ -107,6 +107,15 @@ class RexEventApprovalTests(TestCase):
         self.assertIn(["camilaepierce@gmail.com"], recipients_lists)
         self.assertIn(["owner@example.com"], recipients_lists)
 
+    def test_send_mail_failure_does_not_break_event_save(self):
+        event = self._create_event()
+        with patch("eventmanager.models.send_mail", side_effect=Exception("smtp down")):
+            event.description = "Updated after mail failure"
+            event.save()
+
+        event.refresh_from_db()
+        self.assertEqual(event.description, "Updated after mail failure")
+
     def test_dormcon_can_submit_decision(self):
         event = self._create_event()
         User.objects.create_user(username="DormCon User", password="pass")
@@ -316,4 +325,12 @@ class EmailSettingsTests(TestCase):
         self.assertEqual(
             resolve_email_backend(gmail_app_password="abcd efgh ijkl mnop", debug=False),
             "django.core.mail.backends.smtp.EmailBackend",
+        )
+
+    def test_production_without_gmail_password_uses_console_backend(self):
+        from .email_settings import resolve_email_backend
+
+        self.assertEqual(
+            resolve_email_backend(gmail_app_password="", debug=False),
+            "django.core.mail.backends.console.EmailBackend",
         )
