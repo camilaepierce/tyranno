@@ -5,9 +5,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, HttpResponseForbidden
 from django.template import loader
 from django.views import generic
+import json
 
 from .models import RexEvent, RexUser, SiteConfiguration
 from .csv_export import events_csv_response
+from .rex_config import dorm_groups_for_js
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from .forms import EventForm, ApprovalForm
@@ -76,6 +78,12 @@ def _add_edit_context(context, event, rex_user, editing_enabled):
     context['can_edit_event'] = _user_can_edit_event(rex_user, event, editing_enabled)
 
 
+def _event_form_context():
+    return {
+        "dorm_groups_json": json.dumps(dorm_groups_for_js()),
+    }
+
+
 class EventEditPermissionMixin:
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -94,6 +102,7 @@ class EventCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(get_user_context(self.request))
+        context.update(_event_form_context())
         return context
 
     def form_valid(self, form):
@@ -111,6 +120,7 @@ class EventUpdateView(EventEditPermissionMixin, LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(get_user_context(self.request))
+        context.update(_event_form_context())
         return context
 
 

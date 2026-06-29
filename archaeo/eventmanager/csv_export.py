@@ -4,6 +4,8 @@ from io import StringIO
 from django.http import HttpResponse
 from django.utils import timezone
 
+from eventmanager.rex_config import dorm_display_name, format_event_tags_for_export
+
 EVENT_CSV_HEADERS = [
     "ID",
     "Event Name",
@@ -28,13 +30,13 @@ def event_csv_row(event):
     return [
         str(event.pk).zfill(4),
         event.event_name,
-        event.dorm,
+        dorm_display_name(event.dorm),
         event.dorm_sub,
         event.location,
         _format_csv_datetime(event.start_time),
         _format_csv_datetime(event.end_time),
         event.description,
-        "",
+        format_event_tags_for_export(event.tags),
         _format_csv_datetime(event.published_at),
     ]
 

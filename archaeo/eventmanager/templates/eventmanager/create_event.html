@@ -35,6 +35,21 @@
                     {% include 'eventmanager/_form_field.html' with field=form.event_end_time %}
                 </div>
                 {% elif field.name == 'event_start_time' or field.name == 'event_end_date' or field.name == 'event_end_time' %}
+                {% elif field.name == 'tags' %}
+                <div class="form-group">
+                    {{ field.label_tag }}
+                    <div class="checkbox-list">{{ field }}</div>
+                    {% if field.help_text %}
+                    <p class="help-text">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% if field.errors %}
+                    <ul class="errorlist">
+                        {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
                 {% else %}
                 {% include 'eventmanager/_form_field.html' with field=field %}
                 {% endif %}
@@ -47,4 +62,11 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  window.rexDormGroups = {{ dorm_groups_json|safe }};
+</script>
+<script src="{% static 'js/event_form.js' %}"></script>
 {% endblock %}

@@ -68,19 +68,6 @@ class RexEvent(models.Model):
         DENIED = "DE", _("Denied")
         FLAGGED = "FL", _("Flagged")
 
-    DORM_CHOICES = (
-        ("Baker House", "Baker House"),
-        ("Burton-Conner", "Burton-Conner"),
-        ("East Campus", "East Campus"),
-        ("MacGregor", "MacGregor"),
-        ("Maseeh Hall", "Maseeh Hall"),
-        ("McCormick Hall", "McCormick Hall"),
-        ("New House", "New House"),
-        ("New Vassar", "New Vassar"),
-        ("Random Hall", "Random Hall"),
-        ("Simmons Hall", "Simmons Hall"),
-    )
-
     APPROVAL_FIELDS = (
         ("dc_status", "dc_comment", RexUser.RoleChoices.DORMCON),
         ("ad_status", "ad_comment", RexUser.RoleChoices.AD),
@@ -106,6 +93,7 @@ class RexEvent(models.Model):
         "description",
         "dorm",
         "dorm_sub",
+        "tags",
         "start_time",
         "end_time",
         "email_notif",
@@ -116,8 +104,9 @@ class RexEvent(models.Model):
 
     event_name = models.CharField(max_length=20)
     description = models.TextField(max_length=200)
-    dorm = models.CharField(max_length=30, choices=DORM_CHOICES)
-    dorm_sub = models.CharField(max_length=20)
+    dorm = models.CharField(max_length=40)
+    dorm_sub = models.CharField(max_length=30)
+    tags = models.CharField(max_length=200, blank=True, default="")
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     email_notif = models.TextField()

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static rex_tags %}
 
 {% block title %}Upcoming Events - REX Events{% endblock %}
 {% block page_title %}Upcoming Events{% endblock %}
@@ -20,7 +20,7 @@
                                 <a href="{% url 'event' event.id %}">{{ event.event_name }}</a>
                             </h3>
                             <p class="text-muted mb-1">
-                                <strong>Dorm:</strong> {{ event.dorm }}
+                                <strong>Dorm:</strong> {{ event.dorm|dorm_label }}
                                 {% if event.dorm_sub != "N/A" %}
                                     - {{ event.dorm_sub }}
                                 {% endif %}

@@ -8,6 +8,13 @@ from django.utils import timezone
 
 from .forms import EventForm
 from .models import RexEvent, RexUser, SiteConfiguration
+from .rex_config import dorm_choices, dorm_group_choices, tag_choices
+
+
+REX_FORM_START = "2026-08-30"
+REX_FORM_END = "2026-08-30"
+REX_FORM_START_TIME = "18:00"
+REX_FORM_END_TIME = "19:00"
 
 
 class RexEventApprovalTests(TestCase):
@@ -31,7 +38,7 @@ class RexEventApprovalTests(TestCase):
             "event_name": "Party",
             "description": "Test event",
             "dorm": "Baker House",
-            "dorm_sub": "A",
+            "dorm_sub": "N/A",
             "start_time": now,
             "end_time": now + datetime.timedelta(hours=1),
             "email_notif": "owner@example.com",
@@ -243,74 +250,117 @@ class RexEventApprovalTests(TestCase):
 
 
 class EventFormTests(TestCase):
+    def _valid_form_data(self, **overrides):
+        data = {
+            "event_name": "Party",
+            "description": "Test event",
+            "dorm": "Baker House",
+            "dorm_sub": "N/A",
+            "event_start_date": REX_FORM_START,
+            "event_start_time": REX_FORM_START_TIME,
+            "event_end_date": REX_FORM_END,
+            "event_end_time": REX_FORM_END_TIME,
+            "email_notif": "one@example.com",
+            "location": "Lobby",
+            "contact_name": "Owner",
+            "contact_email": "owner@example.com",
+        }
+        data.update(overrides)
+        return data
+
     def test_dorm_field_is_dropdown_with_expected_choices(self):
         form = EventForm()
         dorm_values = [value for value, _ in form.fields["dorm"].choices if value]
-        self.assertEqual(dorm_values, [choice[0] for choice in RexEvent.DORM_CHOICES])
+        self.assertEqual(dorm_values, [choice[0] for choice in dorm_choices()])
 
-    def test_email_notif_accepts_multiple_addresses(self):
-        now = timezone.now()
+    def test_tags_field_lists_configured_tags(self):
+        form = EventForm()
+        tag_values = [value for value, _ in form.fields["tags"].choices]
+        self.assertEqual(tag_values, [choice[0] for choice in tag_choices()])
+        self.assertIn("meal", tag_values)
+        self.assertIn("party", tag_values)
+
+    def test_dorm_sub_choices_depend_on_selected_dorm(self):
+        form = EventForm(data=self._valid_form_data(dorm="East Campus", dorm_sub="1E"))
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["dorm_sub"], "1E")
+
+    def test_dorm_without_groups_requires_na_subgroup(self):
+        form = EventForm(data=self._valid_form_data())
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["dorm_sub"], "N/A")
+
+    def test_dorm_with_groups_rejects_na_subgroup(self):
+        form = EventForm(
+            data=self._valid_form_data(dorm="East Campus", dorm_sub="N/A")
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("dorm_sub", form.errors)
+
+    def test_tags_are_saved_as_csv(self):
         form = EventForm(
             data={
-                "event_name": "Party",
-                "description": "Test event",
-                "dorm": "Baker House",
-                "dorm_sub": "A",
-                "event_start_date": now.date().isoformat(),
-                "event_start_time": now.strftime("%H:%M"),
-                "event_end_date": now.date().isoformat(),
-                "event_end_time": (now + datetime.timedelta(hours=1)).strftime("%H:%M"),
+                **self._valid_form_data(),
+                "tags": ["party", "social"],
+            }
+        )
+        self.assertTrue(form.is_valid())
+        event = form.save()
+        self.assertEqual(event.tags, "party,social")
+
+    def test_email_notif_accepts_multiple_addresses(self):
+        form = EventForm(
+            data={
+                **self._valid_form_data(),
                 "email_notif": "one@example.com\ntwo@example.com",
-                "location": "Lobby",
-                "contact_name": "Owner",
-                "contact_email": "owner@example.com",
             }
         )
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data["email_notif"], "one@example.com\ntwo@example.com")
 
     def test_end_time_must_be_after_start_time(self):
-        now = timezone.now()
         form = EventForm(
-            data={
-                "event_name": "Party",
-                "description": "Test event",
-                "dorm": "Baker House",
-                "dorm_sub": "A",
-                "event_start_date": now.date().isoformat(),
-                "event_start_time": "18:00",
-                "event_end_date": now.date().isoformat(),
-                "event_end_time": "17:00",
-                "email_notif": "one@example.com",
-                "location": "Lobby",
-                "contact_name": "Owner",
-                "contact_email": "owner@example.com",
-            }
+            data=self._valid_form_data(
+                event_start_time="18:00",
+                event_end_time="17:00",
+            )
         )
         self.assertFalse(form.is_valid())
         self.assertIn("event_end_time", form.errors)
 
     def test_multi_day_event_is_valid(self):
-        start = timezone.now()
-        end = start + datetime.timedelta(days=1, hours=2)
         form = EventForm(
-            data={
-                "event_name": "Party",
-                "description": "Test event",
-                "dorm": "Baker House",
-                "dorm_sub": "A",
-                "event_start_date": start.date().isoformat(),
-                "event_start_time": start.strftime("%H:%M"),
-                "event_end_date": end.date().isoformat(),
-                "event_end_time": end.strftime("%H:%M"),
-                "email_notif": "one@example.com",
-                "location": "Lobby",
-                "contact_name": "Owner",
-                "contact_email": "owner@example.com",
-            }
+            data=self._valid_form_data(
+                event_start_date="2026-08-30",
+                event_end_date="2026-08-31",
+                event_start_time="18:00",
+                event_end_time="20:00",
+            )
         )
         self.assertTrue(form.is_valid())
         self.assertLess(form.cleaned_data["start_time"], form.cleaned_data["end_time"])
+
+    def test_event_outside_rex_dates_is_invalid(self):
+        form = EventForm(
+            data=self._valid_form_data(
+                event_start_date="2026-09-05",
+                event_end_date="2026-09-05",
+            )
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("event_end_date", form.errors)
+
+
+class RexConfigTests(TestCase):
+    def test_dorm_group_choices_for_grouped_dorm(self):
+        choices = dorm_group_choices("Burton-Conner House")
+        group_names = [value for value, _ in choices]
+        self.assertIn("B1", group_names)
+        self.assertIn("B3rd", group_names)
+        self.assertNotIn("N/A", group_names)
+
+    def test_dorm_group_choices_for_ungrouped_dorm(self):
+        self.assertEqual(dorm_group_choices("Baker House"), [("N/A", "N/A")])
 
 
 class EventEditingPermissionTests(TestCase):
@@ -325,7 +375,7 @@ class EventEditingPermissionTests(TestCase):
             event_name="Party",
             description="Test event",
             dorm="Simmons Hall",
-            dorm_sub="A",
+            dorm_sub="N/A",
             start_time=timezone.now(),
             end_time=timezone.now() + datetime.timedelta(hours=1),
             email_notif="creator@example.com",
@@ -549,7 +599,7 @@ class AllEventsCsvTests(TestCase):
             event_name="Party",
             description="Test event",
             dorm="Baker House",
-            dorm_sub="A",
+            dorm_sub="N/A",
             start_time=now,
             end_time=now + datetime.timedelta(hours=1),
             email_notif="owner@example.com",

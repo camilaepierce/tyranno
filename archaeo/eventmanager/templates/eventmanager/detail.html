@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static rex_tags %}
 
 {% block title %}Event Details - REX Events{% endblock %}
 {% block page_title %}Event Details{% endblock %}
@@ -20,12 +20,18 @@
                 </div>
                 <div class="mb-3">
                     <label><strong>Dorm:</strong></label>
-                    <p>{{ rexevent.dorm }}
+                    <p>{{ rexevent.dorm|dorm_label }}
                         {% if rexevent.dorm_sub != "N/A" %}
                             - {{ rexevent.dorm_sub }}
                         {% endif %}
                     </p>
                 </div>
+                {% if rexevent.tags %}
+                <div class="mb-3">
+                    <label><strong>Tags:</strong></label>
+                    <p>{{ rexevent.tags|tags_label }}</p>
+                </div>
+                {% endif %}
                 <div class="mb-3">
                     <label><strong>Location:</strong></label>
                     <p>{{ rexevent.location }}</p>

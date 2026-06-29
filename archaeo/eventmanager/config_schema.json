@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "REX Event Manager Configuration",
+  "type": "object",
+  "required": ["name", "dates", "tags", "dorms"],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "orientation": {
+      "type": "object",
+      "properties": {
+        "mandatory_tag": { "type": "string" },
+        "file_name": { "type": "string" },
+        "include_in_booklet": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "dates": {
+      "type": "object",
+      "required": ["start", "end", "hour_cutoff"],
+      "properties": {
+        "start": { "type": "string", "format": "date" },
+        "end": { "type": "string", "format": "date" },
+        "hour_cutoff": { "type": "integer", "minimum": 0, "maximum": 23 }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "color": { "type": "string" },
+          "emoji": { "type": "string" },
+          "rename_from": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "dorms": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["contact", "color"],
+        "properties": {
+          "contact": { "type": "string" },
+          "color": { "type": "string" },
+          "rename_to": { "type": "string" },
+          "include_on_cover": { "type": "boolean" },
+          "groups": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["color"],
+              "properties": {
+                "color": { "type": "string" },
+                "rename_from": { "type": "string" }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

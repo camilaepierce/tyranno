@@ -1,0 +1,174 @@
+#:schema ./config_schema.json
+name = "REX 2026"
+
+[orientation]
+mandatory_tag = "mandatory"
+file_name = "events/orientation.csv"
+include_in_booklet = true
+
+[dates]
+start = "2026-08-29"
+end = "2026-09-02"
+hour_cutoff = 4
+
+# TAGS
+
+[tags.tour]
+color = "#1E90FF"
+rename_from = "Dorm Tour"
+
+[tags.signature]
+color = "#FFD700"
+
+[tags.updated]
+color = "#808080"
+
+[tags.meal]
+color = "#FF6347"
+emoji = "🍴"
+rename_from = "Food (meal)"
+
+[tags.snacks]
+color = "#CD853F"
+emoji = "🍪"
+rename_from = "Food (snacks)"
+
+[tags.party]
+color = "#C71585"
+emoji = "🎉"
+
+[tags.social]
+color = "#32CD32"
+emoji = "👥"
+
+[tags.games]
+color = "#20B2AA"
+emoji = "🎲"
+
+[tags.art]
+color = "#8A2BE2"
+emoji = "🎨"
+
+# DORMS
+
+[dorms."Baker House"]
+contact = "baker-rex-chairs@mit.edu"
+color = "#005399"
+
+[dorms."Burton-Conner House"]
+contact = "bc-rush@mit.edu"
+color = "#cc4331"
+rename_to = "Burton Conner"
+
+[dorms."East Campus"]
+contact = "ec-rex-chairs-25@mit.edu"
+color = "#aa0000"
+
+[dorms."MacGregor House"]
+contact = "mac-rex-chairs@mit.edu"
+color = "#ad6f65"
+
+[dorms."Maseeh Hall"]
+contact = "maseeh-rex-chair@mit.edu"
+color = "#1f3a6c"
+
+[dorms."McCormick Hall"]
+contact = "mccormick-rex@mit.edu"
+color = "#293142"
+
+[dorms."New House"]
+contact = "nh-rush@mit.edu"
+color = "#2a5fbb"
+
+[dorms."New Vassar"]
+contact = "nv-rex-chair@mit.edu"
+color = "#A62B0C"
+
+[dorms."Next House"]
+contact = "next-rex-comm@mit.edu"
+color = "#34495e"
+
+[dorms."Random Hall"]
+contact = "random-rush-chair@mit.edu"
+color = "#cf2661"
+
+[dorms."Simmons Hall"]
+contact = "simmons-frosh-chairs@mit.edu"
+color = "#25aae1"
+
+[dorms."DormCon"]
+contact = "dormcon-rexvp@mit.edu"
+color = "#4a8faf"
+rename_to = "Campus Wide!"
+include_on_cover = false
+
+# GROUPS
+
+[dorms."Burton-Conner House".groups]
+"B1" = { color = "#0041a5" }
+"B2" = { color = "#2cc4bc" }
+"B3rd" = { color = "#ff9900", rename_from = "B3" }
+"B4" = { color = "#5c1515" }
+"B5" = { color = "#d1581b" }
+"C2" = { color = "#cc0000" }
+"C3" = { color = "#38761d" }
+"C4" = { color = "#c881ff" }
+"C5" = { color = "#b9e3f0" }
+"ILC" = { color = "#ba8617" }
+
+[dorms."East Campus".groups]
+"1E" = { color = "#6900e1" }
+"1W" = { color = "#d16eea" }
+"2E" = { color = "#121212" }
+"2W" = { color = "#ff6900" }
+"3E" = { color = "rgb(249, 178, 0)" }
+"3W" = { color = "#99A7FF" }
+"4E" = { color = "#45fdfe" }
+"4W" = { color = "#000000" }
+"5E" = { color = "#FF0000" }
+"5W" = { color = "rgb(59, 186, 228)" }
+
+[dorms."MacGregor House".groups]
+"A Entry" = { color = "rgba(5,93,243,1)" }
+"B Entry" = { color = "rgba(5,180,93,1)" }
+"C Entry" = { color = "rgba(5,140,40,1)" }
+"D Entry" = { color = "rgba(40,140,240,1)" }
+"E Entry" = { color = "rgba(221,162,126,1)" }
+"F Entry" = { color = "rgba(200,125,150,1)" }
+"G Entry" = { color = "rgba(250,150,50,1)" }
+"H Entry" = { color = "rgba(50,175,50,1)" }
+"J Entry" = { color = "rgba(76,76,254,1)" }
+
+[dorms."New House".groups]
+"Chocolate City" = { color = "#ffed2e" }
+"Desmond" = { color = "#2617d3" }
+"German House" = { color = "#ff0000" }
+"House 3" = { color = "#1F618D" }
+"House 4" = { color = "#6d1fca" }
+"iHouse" = { color = "#238db1" }
+"Juniper" = { color = "#32c13c" }
+"La Casa" = { color = "#e10909" }
+"La Maison Française" = { color = "#3357cc" }
+
+[dorms."Next House".groups]
+"2E" = { color = "ghostwhite" }
+"2W" = { color = "darkturquoise" }
+"3W" = { color = "mediumpurple" }
+"4E" = { color = "darkcyan" }
+"5E" = { color = "darkseagreen" }
+"Next Act" = { color = "#9C1712" }
+"Next CS" = { color = "#de9b35" }
+"Next Haunt" = { color = "#c2ebff" }
+"Next Salon" = { color = "thistle" }
+"Next Sing" = { color = "#007bff" }
+"VGO" = { color = "#4eb7fa" }
+
+[dorms."Random Hall".groups]
+"Black Hole" = { color = "rgb(155, 89, 182)" }
+"BMF" = { color = "rgb(173, 20, 87)" }
+"Bonfire" = { color = "rgb(255, 0, 0)" }
+"Clam" = { color = "rgb(231, 76, 60)" }
+"Destiny" = { color = "rgb(88, 155, 0)" }
+"Foo" = { color = "rgb(51, 255, 51)" }
+"Loop" = { color = "rgb(255, 0, 249)" }
+"Pecker" = { color = "rgb(243, 255, 0)" }
