@@ -17,3 +17,7 @@ services:
         value: trexdormcon.com,www.trexdormcon.com
       - key: CSRF_TRUSTED_ORIGINS
         value: https://trexdormcon.com,https://www.trexdormcon.com
+      - key: GMAIL_SENDER_EMAIL
+        value: mit.rex.events@gmail.com
+      - key: GMAIL_APP_PASSWORD
+        sync: false

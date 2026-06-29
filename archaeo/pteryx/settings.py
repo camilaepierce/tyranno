@@ -249,10 +249,10 @@ else:
     CSRF_COOKIE_SECURE = True
 
 # Outbound notification email (separate from Petrock/Touchstone user login).
-from eventmanager.email_settings import resolve_email_backend
+from eventmanager.email_settings import normalize_gmail_app_password, resolve_email_backend
 
 GMAIL_SENDER_EMAIL = os.environ.get('GMAIL_SENDER_EMAIL', 'mit.rex.events@gmail.com').strip()
-GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
+GMAIL_APP_PASSWORD = normalize_gmail_app_password(os.environ.get('GMAIL_APP_PASSWORD', ''))
 DEFAULT_FROM_EMAIL = GMAIL_SENDER_EMAIL
 EMAIL_BACKEND = resolve_email_backend(
     gmail_app_password=GMAIL_APP_PASSWORD,

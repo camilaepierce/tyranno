@@ -375,7 +375,7 @@ a:hover {
 
 .form-row-schedule {
   display: grid;
-  grid-template-columns: minmax(10rem, 1.2fr) minmax(8rem, 1fr) minmax(8rem, 1fr);
+  grid-template-columns: repeat(2, minmax(10rem, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
 }

@@ -1,0 +1,5 @@
+{% if event.start_time|date:"Y-m-d" == event.end_time|date:"Y-m-d" %}
+{{ event.start_time|date:"M d, Y g:i A" }} - {{ event.end_time|date:"g:i A" }}
+{% else %}
+{{ event.start_time|date:"M d, Y g:i A" }} - {{ event.end_time|date:"M d, Y g:i A" }}
+{% endif %}

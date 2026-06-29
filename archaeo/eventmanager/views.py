@@ -7,9 +7,21 @@ from django.template import loader
 from django.views import generic
 
 from .models import RexEvent, RexUser, SiteConfiguration
+from .csv_export import events_csv_response
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from .forms import EventForm, ApprovalForm
+
+
+def _user_is_admin(user_context):
+    return user_context.get("user_role") in user_context.get("admin_roles", [])
+
+
+def _admin_required_response(request):
+    user_context = get_user_context(request)
+    if _user_is_admin(user_context):
+        return None
+    return HttpResponseForbidden("You do not have permission to access this page.")
 
 
 def get_user_context(request):
@@ -18,7 +30,7 @@ def get_user_context(request):
     user_role = rex_user.role if rex_user else None
 
     approver_roles = ['DormCon', 'AD', 'RES', 'EHS']
-    admin_roles = ['DormCon', 'AD']
+    admin_roles = ['DormCon', 'AD', 'RES', 'EHS']
     site_config = SiteConfiguration.load()
 
     return {
@@ -223,6 +235,10 @@ def myevents(request):
 
 @login_required
 def allevents(request):
+    forbidden = _admin_required_response(request)
+    if forbidden:
+        return forbidden
+
     upcoming_events = RexEvent.objects.order_by("-start_time")
     template = loader.get_template("eventmanager/allevents.html")
     context = {
@@ -230,6 +246,16 @@ def allevents(request):
     }
     context.update(get_user_context(request))
     return HttpResponse(template.render(context, request))
+
+
+@login_required
+def allevents_csv(request):
+    forbidden = _admin_required_response(request)
+    if forbidden:
+        return forbidden
+
+    events = RexEvent.objects.order_by("-start_time")
+    return events_csv_response(events)
 
 
 @login_required

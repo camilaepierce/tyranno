@@ -29,7 +29,7 @@
                                 <p><strong>Dorm:</strong> {{ event.dorm }}
                                     {% if event.dorm_sub != "N/A" %}- {{ event.dorm_sub }}{% endif %}</p>
                                 <p><strong>Location:</strong> {{ event.location }}</p>
-                                <p><strong>Date:</strong> {{ event.start_time|date:"M d, Y g:i A" }} - {{ event.end_time|date:"g:i A" }}</p>
+                                <p><strong>Date:</strong> {% include 'eventmanager/_event_schedule.html' with event=event %}</p>
                                 <p><strong>Contact:</strong> {{ event.contact_name }} ({{ event.contact_email }})</p>
                             </div>
                             <div>

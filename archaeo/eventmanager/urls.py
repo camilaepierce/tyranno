@@ -10,6 +10,7 @@ urlpatterns = [
     # path("new", views.create_event, name="create_event"),
     path("myevents", views.myevents, name="myevents"),
     path("all", views.allevents, name="allevents"),
+    path("all/csv", views.allevents_csv, name="allevents-csv"),
     path("departments", views.departments_all, name="departments_all"),
     path("departments/dc", views.dep_dc, name="dep_dc"),
     path("departments/res", views.dep_res, name="dep_res"),

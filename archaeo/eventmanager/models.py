@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 import logging
@@ -142,6 +143,7 @@ class RexEvent(models.Model):
         choices=ApprovalStatus,
         default="PE")
     ad_comment = models.TextField(blank=True, default="")
+    published_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.event_name
@@ -163,10 +165,17 @@ class RexEvent(models.Model):
                 emails.append(email)
         return list(dict.fromkeys(emails))
 
+    def event_notification_recipients(self):
+        recipients = list(self.notification_emails())
+        if self.created_by and self.created_by.email:
+            recipients.append(self.created_by.email)
+        return list(dict.fromkeys(email for email in recipients if email))
+
     def reset_approvals(self):
         for status_field, comment_field, _ in self.APPROVAL_FIELDS:
             setattr(self, status_field, self.ApprovalStatus.PENDING)
             setattr(self, comment_field, "")
+        self.published_at = None
 
     def active_approval_stage(self, status_values=None):
         for field_names, roles in self.APPROVAL_STAGES:
@@ -237,8 +246,31 @@ class RexEvent(models.Model):
                 recipients,
             )
 
-    def _notify_subscribers(self, subject, body):
-        self._send_mail(subject, body, self.notification_emails())
+    def _notify_event_contacts(self, subject, body):
+        self._send_mail(subject, body, self.event_notification_recipients())
+
+    def _approval_status_changes(self, previous):
+        changes = []
+        has_denial = False
+        if not previous:
+            return changes, has_denial
+
+        for status_field in self.approval_status_fields():
+            previous_status = previous[status_field]
+            current_status = getattr(self, status_field)
+            if previous_status == current_status:
+                continue
+
+            label = status_field.replace("_status", "").upper()
+            display = dict(self.ApprovalStatus.choices).get(
+                current_status,
+                current_status,
+            )
+            changes.append(f"{label}: {display}")
+            if current_status == self.ApprovalStatus.DENIED:
+                has_denial = True
+
+        return changes, has_denial
 
     def _notify_active_stage(self, stage):
         _, roles = stage
@@ -275,6 +307,9 @@ class RexEvent(models.Model):
         if content_changed:
             self.reset_approvals()
 
+        if self.is_fully_approved() and self.published_at is None:
+            self.published_at = timezone.now()
+
         super().save(*args, **kwargs)
 
         current_stage = self.active_approval_stage()
@@ -282,50 +317,56 @@ class RexEvent(models.Model):
         if is_new or content_changed:
             if current_stage:
                 self._notify_active_stage(current_stage)
-            self._notify_subscribers(
-                f"Event updated: {self.event_name}",
-                (
-                    f"The event {self.event_name} was {'submitted' if is_new else 'updated'}.\n\n"
-                    f"All approval statuses have been reset to pending.\n"
-                    f"View details: {self.event_absolute_url()}\n"
-                ),
-            )
-        elif approval_only_change and current_stage and current_stage != previous_stage:
-            self._notify_active_stage(current_stage)
+            if is_new:
+                self._notify_event_contacts(
+                    f"Event submitted: {self.event_name}",
+                    (
+                        f"The event {self.event_name} was submitted for approval.\n\n"
+                        f"View details: {self.event_absolute_url()}\n"
+                    ),
+                )
+            else:
+                self._notify_event_contacts(
+                    f"Event updated: {self.event_name}",
+                    (
+                        f"The event {self.event_name} was updated.\n\n"
+                        f"All approval statuses have been reset to pending.\n"
+                        f"View details: {self.event_absolute_url()}\n"
+                    ),
+                )
         elif approval_only_change:
-            changed_statuses = []
-            if previous:
-                for status_field in self.approval_status_fields():
-                    if previous[status_field] != getattr(self, status_field):
-                        label = status_field.replace("_status", "").upper()
-                        display = dict(self.ApprovalStatus.choices).get(
-                            getattr(self, status_field),
-                            getattr(self, status_field),
-                        )
-                        changed_statuses.append(f"{label}: {display}")
+            changed_statuses, has_denial = self._approval_status_changes(previous)
+
+            if current_stage and current_stage != previous_stage:
+                self._notify_active_stage(current_stage)
 
             if changed_statuses:
-                self._notify_subscribers(
-                    f"Approval update: {self.event_name}",
-                    (
-                        f"Approval statuses changed for {self.event_name}:\n"
-                        f"{chr(10).join(changed_statuses)}\n\n"
-                        f"View details: {self.event_absolute_url()}\n"
-                    ),
-                )
-
-            if self.is_fully_approved():
-                recipients = list(self.notification_emails())
-                if self.created_by and self.created_by.email:
-                    recipients.append(self.created_by.email)
-                self._send_mail(
-                    f"Event approved: {self.event_name}",
-                    (
-                        f"All required approvals have been received for {self.event_name}.\n\n"
-                        f"View details: {self.event_absolute_url()}\n"
-                    ),
-                    recipients,
-                )
+                if self.is_fully_approved():
+                    self._notify_event_contacts(
+                        f"Event approved: {self.event_name}",
+                        (
+                            f"All required approvals have been received for {self.event_name}.\n\n"
+                            f"View details: {self.event_absolute_url()}\n"
+                        ),
+                    )
+                elif has_denial:
+                    self._notify_event_contacts(
+                        f"Event rejected: {self.event_name}",
+                        (
+                            f"An approval decision rejected {self.event_name}:\n"
+                            f"{chr(10).join(changed_statuses)}\n\n"
+                            f"View details: {self.event_absolute_url()}\n"
+                        ),
+                    )
+                else:
+                    self._notify_event_contacts(
+                        f"Approval update: {self.event_name}",
+                        (
+                            f"Approval statuses changed for {self.event_name}:\n"
+                            f"{chr(10).join(changed_statuses)}\n\n"
+                            f"View details: {self.event_absolute_url()}\n"
+                        ),
+                    )
         
     def return_fields(self):
         return [

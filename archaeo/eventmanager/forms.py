@@ -10,7 +10,12 @@ from eventmanager.models import RexEvent
 
 
 TEXTAREA_ROWS = 4
-SCHEDULE_FIELD_NAMES = ("event_date", "event_start_time", "event_end_time")
+SCHEDULE_FIELD_NAMES = (
+    "event_start_date",
+    "event_start_time",
+    "event_end_date",
+    "event_end_time",
+)
 
 
 def parse_notification_emails(raw_value):
@@ -24,13 +29,17 @@ def parse_notification_emails(raw_value):
 
 class EventForm(ModelForm):
     dorm = ChoiceField(choices=RexEvent.DORM_CHOICES)
-    event_date = forms.DateField(
-        label="Event date",
+    event_start_date = forms.DateField(
+        label="Start date",
         widget=forms.DateInput(attrs={"type": "date"}),
     )
     event_start_time = forms.TimeField(
         label="Start time",
         widget=forms.TimeInput(attrs={"type": "time", "step": "900"}),
+    )
+    event_end_date = forms.DateField(
+        label="End date",
+        widget=forms.DateInput(attrs={"type": "date"}),
     )
     event_end_time = forms.TimeField(
         label="End time",
@@ -81,34 +90,42 @@ class EventForm(ModelForm):
         )
         self.fields["description"].help_text = "Describe the event."
         self.fields["event_start_time"].help_text = "Use 15-minute increments."
-        self.fields["event_end_time"].help_text = "Must be after the start time on the same day."
+        self.fields["event_end_time"].help_text = (
+            "Use 15-minute increments. End date and time must be after the start."
+        )
 
         if self.instance.pk and self.instance.start_time and self.instance.end_time:
             local_start = timezone.localtime(self.instance.start_time)
             local_end = timezone.localtime(self.instance.end_time)
-            self.fields["event_date"].initial = local_start.date()
-            self.fields["event_start_time"].initial = local_start.time().replace(second=0, microsecond=0)
-            self.fields["event_end_time"].initial = local_end.time().replace(second=0, microsecond=0)
+            self.fields["event_start_date"].initial = local_start.date()
+            self.fields["event_start_time"].initial = local_start.time().replace(
+                second=0, microsecond=0
+            )
+            self.fields["event_end_date"].initial = local_end.date()
+            self.fields["event_end_time"].initial = local_end.time().replace(
+                second=0, microsecond=0
+            )
 
     def clean(self):
         cleaned_data = super().clean()
-        event_date = cleaned_data.get("event_date")
+        start_date = cleaned_data.get("event_start_date")
         start_time = cleaned_data.get("event_start_time")
+        end_date = cleaned_data.get("event_end_date")
         end_time = cleaned_data.get("event_end_time")
 
-        if event_date and start_time and end_time:
-            if end_time <= start_time:
-                self.add_error("event_end_time", "End time must be after start time.")
+        if start_date and start_time and end_date and end_time:
+            tz = timezone.get_current_timezone()
+            start_dt = timezone.make_aware(datetime.combine(start_date, start_time), tz)
+            end_dt = timezone.make_aware(datetime.combine(end_date, end_time), tz)
+
+            if end_dt <= start_dt:
+                self.add_error(
+                    "event_end_time",
+                    "End date and time must be after the start date and time.",
+                )
             else:
-                tz = timezone.get_current_timezone()
-                cleaned_data["start_time"] = timezone.make_aware(
-                    datetime.combine(event_date, start_time),
-                    tz,
-                )
-                cleaned_data["end_time"] = timezone.make_aware(
-                    datetime.combine(event_date, end_time),
-                    tz,
-                )
+                cleaned_data["start_time"] = start_dt
+                cleaned_data["end_time"] = end_dt
 
         return cleaned_data
 

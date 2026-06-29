@@ -27,13 +27,14 @@
             {% endif %}
 
             {% for field in form %}
-                {% if field.name == 'event_date' %}
+                {% if field.name == 'event_start_date' %}
                 <div class="form-row form-row-schedule">
-                    {% include 'eventmanager/_form_field.html' with field=form.event_date %}
+                    {% include 'eventmanager/_form_field.html' with field=form.event_start_date %}
                     {% include 'eventmanager/_form_field.html' with field=form.event_start_time %}
+                    {% include 'eventmanager/_form_field.html' with field=form.event_end_date %}
                     {% include 'eventmanager/_form_field.html' with field=form.event_end_time %}
                 </div>
-                {% elif field.name == 'event_start_time' or field.name == 'event_end_time' %}
+                {% elif field.name == 'event_start_time' or field.name == 'event_end_date' or field.name == 'event_end_time' %}
                 {% else %}
                 {% include 'eventmanager/_form_field.html' with field=field %}
                 {% endif %}
