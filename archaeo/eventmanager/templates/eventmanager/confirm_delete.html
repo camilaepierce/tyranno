@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Event - REX Events{% endblock %}
+{% block page_title %}Delete Event{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Delete Event</h2>
+    </div>
+    <form action="" method="post">
+        {% csrf_token %}
+        <div class="card-body">
+            <p>Wait! Are you sure you want to delete your REX event <strong>{{ object.event_name }}</strong>? This action is not reversible.</p>
+            <p>Type the following message to confirm:</p>
+            <p><strong>{{ delete_confirmation_phrase }}</strong></p>
+            <div class="form-group">
+                <label for="confirmation_phrase">Confirmation message</label>
+                <input
+                    type="text"
+                    name="confirmation_phrase"
+                    id="confirmation_phrase"
+                    required
+                    autocomplete="off"
+                    placeholder="Type the message above exactly"
+                >
+            </div>
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-danger">Delete Event</button>
+            <a href="{% url 'event' object.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

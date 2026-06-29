@@ -244,6 +244,28 @@ class EventEditingPermissionTests(TestCase):
         response = self.client.get(reverse("event-update", kwargs={"pk": self.event.pk}))
         self.assertEqual(response.status_code, 403)
 
+    def test_creator_can_view_delete_confirmation(self):
+        self.client.login(username="Creator", password="pass")
+        response = self.client.get(reverse("event-delete", kwargs={"pk": self.event.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Wait! Are you sure you want to delete your REX event")
+        self.assertContains(response, "tell camila to update this message before deployment")
+
+    def test_creator_can_delete_their_event(self):
+        self.client.login(username="Creator", password="pass")
+        response = self.client.post(
+            reverse("event-delete", kwargs={"pk": self.event.pk}),
+            {"confirmation_phrase": "tell camila to update this message before deployment"},
+        )
+        self.assertRedirects(response, reverse("myevents"))
+        self.assertFalse(RexEvent.objects.filter(pk=self.event.pk).exists())
+
+    def test_creator_cannot_delete_without_confirmation_phrase(self):
+        self.client.login(username="Creator", password="pass")
+        response = self.client.post(reverse("event-delete", kwargs={"pk": self.event.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(RexEvent.objects.filter(pk=self.event.pk).exists())
+
 
 class PetrockAuthTests(TestCase):
     def test_sync_rex_user_creates_student_record(self):

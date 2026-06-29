@@ -55,6 +55,11 @@ def _user_can_edit_event(rex_user, event, editing_enabled):
     )
 
 
+DELETE_CONFIRMATION_PHRASE = (
+    "tell camila to update this message before deployment"
+)
+
+
 def _add_edit_context(context, event, rex_user, editing_enabled):
     context['can_edit_event'] = _user_can_edit_event(rex_user, event, editing_enabled)
 
@@ -99,12 +104,30 @@ class EventUpdateView(EventEditPermissionMixin, LoginRequiredMixin, UpdateView):
 
 class EventDeleteView(EventEditPermissionMixin, LoginRequiredMixin, DeleteView):
     model = RexEvent
-    success_url = reverse_lazy("index")
+    template_name = "eventmanager/confirm_delete.html"
+    success_url = reverse_lazy("myevents")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(get_user_context(self.request))
+        context["delete_confirmation_phrase"] = DELETE_CONFIRMATION_PHRASE
         return context
+
+    def post(self, request, *args, **kwargs):
+        confirmation = request.POST.get("confirmation_phrase", "").strip()
+        if confirmation != DELETE_CONFIRMATION_PHRASE:
+            messages.error(
+                request,
+                "Deletion cancelled. Type the exact confirmation message to proceed.",
+            )
+            return self.render_to_response(self.get_context_data())
+        return super().post(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        event_name = self.object.event_name
+        response = super().delete(request, *args, **kwargs)
+        messages.success(request, f'"{event_name}" has been deleted.')
+        return response
 
 
 def logged_out(request):

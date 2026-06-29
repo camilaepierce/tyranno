@@ -54,12 +54,14 @@
                                 </p>
                             </div>
                         </div>
+                        {% if user_role == 'EHS' %}
+                        <div class="approval-section">
+                            {% include 'departments/approval_form.html' with event=event %}
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="card-footer">
                         <a href="{% url 'event' event.pk %}" class="btn btn-primary">View Full Details</a>
-                        {% if user_role == 'EHS' %}
-                        {% include 'departments/approval_form.html' with event=event %}
-                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}

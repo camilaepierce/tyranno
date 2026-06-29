@@ -168,15 +168,23 @@ a:hover {
   transition: all 0.3s ease;
 }
 
-.nav-link:hover {
+.nav-link:hover,
+.nav-link:focus {
   background-color: var(--sidebar-hover);
-  padding-left: calc(var(--spacing-md) + var(--spacing-sm));
+  /* padding-left: calc(var(--spacing-md) + var(--spacing-sm)); */
+  color: var(--sidebar-text);
+  text-decoration: none;
 }
 
 .nav-link.active {
   background-color: var(--sidebar-active);
   color: var(--white);
   font-weight: 600;
+}
+
+.nav-link.active:hover,
+.nav-link.active:focus {
+  color: var(--white);
 }
 
 /* ============================================
@@ -312,6 +320,16 @@ a:hover {
   display: flex;
   gap: var(--spacing-md);
   justify-content: flex-end;
+}
+
+.approval-section {
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+}
+
+.approval-form .form-group:last-of-type {
+  margin-bottom: var(--spacing-md);
 }
 
 /* ============================================

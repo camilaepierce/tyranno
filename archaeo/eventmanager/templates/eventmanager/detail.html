@@ -94,20 +94,18 @@
                 {% endif %}
 
                 {% if can_approve %}
-                <div class="card mt-3">
-                    <div class="card-header">
-                        <h4 style="margin: 0;">Submit Your Approval</h4>
-                    </div>
-                    <div class="card-body">
-                        {% if approval_comment %}
-                        <p><strong>Current comment:</strong> {{ approval_comment }}</p>
-                        {% endif %}
-                        <form action="{% url 'event-approve' rexevent.pk %}" method="post">
-                            {% csrf_token %}
-                            {{ approval_form.as_p }}
-                            <button type="submit" class="btn btn-success">Submit Approval</button>
-                        </form>
-                    </div>
+                <div class="approval-section">
+                    <h4 style="color: var(--primary-color); margin-bottom: var(--spacing-md);">Submit Your Approval</h4>
+                    {% if approval_comment %}
+                    <p class="mb-3"><strong>Current comment:</strong> {{ approval_comment }}</p>
+                    {% endif %}
+                    <form action="{% url 'event-approve' rexevent.pk %}" method="post" class="approval-form">
+                        {% csrf_token %}
+                        {% for field in approval_form %}
+                        {% include 'eventmanager/_form_field.html' with field=field %}
+                        {% endfor %}
+                        <button type="submit" class="btn btn-success">Submit Approval</button>
+                    </form>
                 </div>
                 {% elif user_role in approver_roles %}
                 <div class="mt-3">
