@@ -268,6 +268,29 @@ class PetrockAuthTests(TestCase):
         self.assertEqual(rex_user.role, "Student")
         self.assertEqual(rex_user.username, "Test Student")
 
+    def test_sync_rex_user_does_not_create_duplicate_when_email_exists(self):
+        from .auth import PetrockOIDCBackend
+
+        RexUser.objects.create(
+            username="Approver",
+            role="DormCon",
+            email="approver@mit.edu",
+        )
+        backend = PetrockOIDCBackend()
+        user = User.objects.create_user(
+            username="approver@mit.edu",
+            email="approver@mit.edu",
+        )
+        backend._sync_rex_user(
+            user,
+            {
+                "email": "approver@mit.edu",
+                "name": "Approver",
+            },
+        )
+
+        self.assertEqual(RexUser.objects.filter(email="approver@mit.edu").count(), 1)
+
     def test_get_rex_user_matches_by_email(self):
         from .views import _get_rex_user
 
@@ -289,6 +312,51 @@ class PetrockAuthTests(TestCase):
 
         rex_user = _get_rex_user(request)
         self.assertEqual(rex_user.role, "AD")
+
+    def test_get_rex_user_prefers_approver_role_when_emails_duplicate(self):
+        from .views import _get_rex_user
+
+        RexUser.objects.create(
+            username="Student Record",
+            role="Student",
+            email="dup@mit.edu",
+        )
+        RexUser.objects.create(
+            username="DormCon Record",
+            role="DormCon",
+            email="dup@mit.edu",
+        )
+        user = User.objects.create_user(
+            username="dup@mit.edu",
+            email="dup@mit.edu",
+        )
+
+        class Request:
+            pass
+
+        request = Request()
+        request.user = user
+
+        rex_user = _get_rex_user(request)
+        self.assertEqual(rex_user.role, "DormCon")
+
+    def test_index_works_for_authenticated_admin_with_duplicate_rex_users(self):
+        RexUser.objects.create(
+            username="Student Record",
+            role="Student",
+            email="dup@mit.edu",
+        )
+        RexUser.objects.create(
+            username="DormCon Record",
+            role="DormCon",
+            email="dup@mit.edu",
+        )
+        User.objects.create_superuser("admin-dup", "dup@mit.edu", "pass")
+        self.client.login(username="admin-dup", password="pass")
+
+        response = self.client.get(reverse("index"))
+
+        self.assertEqual(response.status_code, 200)
 
 
 class LogoutPageTests(TestCase):

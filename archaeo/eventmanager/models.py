@@ -20,8 +20,45 @@ class RexUser(models.Model):
     role = models.CharField(max_length=10, choices=RoleChoices.choices)
     email = models.EmailField(null=True, blank=True)
 
+    ROLE_LOOKUP_PRIORITY = (
+        RoleChoices.DORMCON,
+        RoleChoices.AD,
+        RoleChoices.RES,
+        RoleChoices.EHS,
+        RoleChoices.STUDENT,
+    )
+
     def __str__(self):
         return self.username
+
+    @classmethod
+    def for_auth_user(cls, user):
+        if not getattr(user, "is_authenticated", False):
+            return None
+
+        if user.email:
+            match = cls._pick_from_matches(cls.objects.filter(email__iexact=user.email))
+            if match:
+                return match
+
+        return cls._pick_from_matches(cls.objects.filter(username=user.username))
+
+    @classmethod
+    def _pick_from_matches(cls, queryset):
+        if not queryset.exists():
+            return None
+
+        if queryset.count() > 1:
+            logger.warning(
+                "Multiple RexUser records matched for lookup; using highest-priority role.",
+            )
+
+        for role in cls.ROLE_LOOKUP_PRIORITY:
+            match = queryset.filter(role=role).first()
+            if match:
+                return match
+
+        return queryset.first()
 
 class RexEvent(models.Model):
     class ApprovalStatus(models.TextChoices):

@@ -35,11 +35,12 @@ class PetrockOIDCBackend(OIDCAuthenticationBackend):
         if not email:
             return
 
+        if RexUser.objects.filter(email__iexact=email).exists():
+            return
+
         display_name = claims.get("name") or email.split("@", 1)[0]
-        RexUser.objects.get_or_create(
+        RexUser.objects.create(
             email=email,
-            defaults={
-                "username": display_name,
-                "role": RexUser.RoleChoices.STUDENT,
-            },
+            username=display_name,
+            role=RexUser.RoleChoices.STUDENT,
         )

@@ -31,17 +31,8 @@ def get_user_context(request):
 
 
 def _get_rex_user(request):
-    if hasattr(request, 'user') and request.user.is_authenticated:
-        user = request.user
-        if user.email:
-            try:
-                return RexUser.objects.get(email__iexact=user.email)
-            except RexUser.DoesNotExist:
-                pass
-        try:
-            return RexUser.objects.get(username=user.username)
-        except RexUser.DoesNotExist:
-            return None
+    if hasattr(request, "user"):
+        return RexUser.for_auth_user(request.user)
     return None
 
 
