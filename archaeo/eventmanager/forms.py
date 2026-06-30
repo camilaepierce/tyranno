@@ -111,7 +111,7 @@ class EventForm(ModelForm):
                 "email_notif",
             ]
         )
-        self.fields["email_notif"].label = "Notification emails"
+        self.fields["email_notif"].label = "Additional notification emails"
         self.fields["email_notif"].help_text = (
             "Add one email address per line. These contacts will be notified when "
             "event details or approval statuses change."

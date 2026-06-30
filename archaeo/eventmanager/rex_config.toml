@@ -20,8 +20,6 @@ rename_from = "Dorm Tour"
 [tags.signature]
 color = "#FFD700"
 
-[tags.updated]
-color = "#808080"
 
 [tags.meal]
 color = "#FF6347"
