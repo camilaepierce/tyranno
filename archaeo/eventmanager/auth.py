@@ -6,6 +6,18 @@ from .models import RexUser
 class PetrockOIDCBackend(OIDCAuthenticationBackend):
     """Authenticate MIT users via Petrock and keep RexUser records in sync."""
 
+    def _single_user_queryset(self, users, email):
+        """Pick one account when multiple Django users share the same MIT email."""
+        if users.count() <= 1:
+            return users
+
+        canonical = users.filter(username__iexact=email).order_by("pk").first()
+        if canonical:
+            return self.UserModel.objects.filter(pk=canonical.pk)
+
+        chosen = users.order_by("-last_login", "date_joined", "pk").first()
+        return self.UserModel.objects.filter(pk=chosen.pk)
+
     def filter_users_by_claims(self, claims):
         email = claims.get("email")
         if not email:
@@ -13,10 +25,11 @@ class PetrockOIDCBackend(OIDCAuthenticationBackend):
 
         users = self.UserModel.objects.filter(email__iexact=email)
         if users.exists():
-            return users
+            return self._single_user_queryset(users, email)
 
         # Petrock uses MIT email as the Django username; match legacy accounts too.
-        return self.UserModel.objects.filter(username__iexact=email)
+        users = self.UserModel.objects.filter(username__iexact=email)
+        return self._single_user_queryset(users, email)
 
     def get_username(self, claims):
         return claims.get("email") or super().get_username(claims)

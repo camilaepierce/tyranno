@@ -62,6 +62,21 @@ class PetrockAuthTests(TestCase):
         matches = backend.filter_users_by_claims({"email": "ad@mit.edu"})
         self.assertEqual(list(matches), [user])
 
+    def test_filter_users_by_claims_prefers_username_match_when_emails_duplicate(self):
+        from .auth import PetrockOIDCBackend
+
+        canonical = User.objects.create_user(
+            username="student@mit.edu",
+            email="student@mit.edu",
+        )
+        User.objects.create_user(
+            username="legacy_admin",
+            email="student@mit.edu",
+        )
+        backend = PetrockOIDCBackend()
+        matches = backend.filter_users_by_claims({"email": "student@mit.edu"})
+        self.assertEqual(list(matches), [canonical])
+
     def test_create_user_updates_existing_username_match(self):
         from .auth import PetrockOIDCBackend
 
