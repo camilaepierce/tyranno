@@ -4,7 +4,7 @@
 
 :root {
   /* Brand colors from dormcon.mit.edu */
-  --primary-color: #317da0;
+  --primary-color: #102445;
   --primary-dark: #225770;
   --primary-light: #499fc7;
   --secondary-color: #4692b6;
@@ -14,17 +14,17 @@
   --danger-color: #e74c3c;
 
   /* Neutral colors */
-  --light-bg: #ffffff;
-  --page-bg: #f6f8fa;
+  --light-bg: #ebf2fc;
+  --page-bg: #1b1b1d;
   --dark-bg: #225770;
   --border-color: #dfe3e8;
-  --text-primary: #1c1e21;
-  --text-secondary: #606770;
+  --text-primary: #e3e3e3;
+  --text-secondary: #407992;
   --white: #ffffff;
 
   /* Sidebar */
-  --sidebar-bg: #225770;
-  --sidebar-text: #f5f8fa;
+  --sidebar-bg: #242526;
+  --sidebar-text: #e3e3e3;
   --sidebar-hover: #2f6884;
   --sidebar-active: #4692b6;
 
@@ -172,7 +172,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  background: linear-gradient(45deg, var(--primary-dark), var(--secondary-color));
+  background: var(--secondary-color);
   color: var(--white);
   font-weight: 700;
   font-size: 0.9rem;
