@@ -5,7 +5,7 @@
 :root {
   /* Brand colors from dormcon.mit.edu */
   --primary-color: #102445;
-  --primary-dark: #225770;
+  --primary-dark: #499fc7;
   --primary-light: #499fc7;
   --secondary-color: #4692b6;
   --accent-color: #cc4331;
@@ -17,10 +17,10 @@
   --light-bg: #ebf2fc;
   --page-bg: #1b1b1d;
   --dark-bg: #225770;
-  --border-color: #dfe3e8;
+  --border-color: #727272;
   --text-primary: #e3e3e3;
-  --text-secondary: #407992;
-  --white: #ffffff;
+  --text-secondary: #eeeeee;
+  --white: #e3e3e3;
 
   /* Sidebar */
   --sidebar-bg: #242526;
@@ -93,7 +93,7 @@ html, body {
 }
 
 a {
-  color: var(--primary-color);
+  color: var(--text-secondary);
   text-decoration: none;
   transition: color 0.2s ease;
 }
@@ -139,7 +139,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .header {
-  background-color: var(--sidebar-bg);
+  background-color: var(--dark-bg);
   border-bottom: var(--ifm-global-border-width) solid var(--border-color);
   padding: var(--spacing-md) var(--spacing-xl);
   box-shadow: var(--shadow-sm);
@@ -251,7 +251,7 @@ h1, h2, h3, h4, h5, h6 {
 .header-title {
   font-size: var(--font-size-xl);
   font-weight: 700;
-  color: var(--primary-dark);
+  color: var(--white);
 }
 
 .header-actions {
