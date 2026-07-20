@@ -72,7 +72,12 @@ ALLOWED_HOSTS = _env_list(
 
 CSRF_TRUSTED_ORIGINS = _env_list(
     'CSRF_TRUSTED_ORIGINS',
-    default=['https://trexdormcon.com', 'https://www.trexdormcon.com'],
+    default=[
+        'https://trexdormcon.com',
+        'https://www.trexdormcon.com',
+        'http://localhost:4000',
+        'http://127.0.0.1:4000',
+    ],
 )
 
 SITE_URL = os.environ.get('SITE_URL', 'https://trexdormcon.com').strip().rstrip('/')
@@ -112,6 +117,7 @@ OIDC_RP_SCOPES = 'openid email profile'
 OIDC_RP_SIGN_ALGO = 'RS256'
 OIDC_TOKEN_USE_BASIC_AUTH = True
 OIDC_VERIFY_SSL = True
+OIDC_CALLBACK_CLASS = 'eventmanager.oidc_views.PetrockOIDCCallbackView'
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/logged-out/'
@@ -247,6 +253,12 @@ else:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+    site_host = urlparse(SITE_URL).hostname or ''
+    if site_host.endswith('trexdormcon.com'):
+        cookie_domain = '.trexdormcon.com'
+        SESSION_COOKIE_DOMAIN = cookie_domain
+        CSRF_COOKIE_DOMAIN = cookie_domain
 
 # Outbound notification email (separate from Petrock/Touchstone user login).
 from eventmanager.email_settings import normalize_gmail_app_password, resolve_email_backend

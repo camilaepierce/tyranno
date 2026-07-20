@@ -6,13 +6,30 @@ from .models import RexUser
 class PetrockOIDCBackend(OIDCAuthenticationBackend):
     """Authenticate MIT users via Petrock and keep RexUser records in sync."""
 
+    def filter_users_by_claims(self, claims):
+        email = claims.get("email")
+        if not email:
+            return self.UserModel.objects.none()
+
+        users = self.UserModel.objects.filter(email__iexact=email)
+        if users.exists():
+            return users
+
+        # Petrock uses MIT email as the Django username; match legacy accounts too.
+        return self.UserModel.objects.filter(username__iexact=email)
+
     def get_username(self, claims):
         return claims.get("email") or super().get_username(claims)
 
     def create_user(self, claims):
         email = claims.get("email")
+        username = self.get_username(claims)
+        existing = self.UserModel.objects.filter(username__iexact=username).first()
+        if existing:
+            return self.update_user(existing, claims)
+
         user = self.UserModel.objects.create_user(
-            self.get_username(claims),
+            username,
             email=email,
             first_name=claims.get("given_name", ""),
             last_name=claims.get("family_name", ""),

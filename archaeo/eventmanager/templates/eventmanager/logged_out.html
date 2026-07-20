@@ -9,7 +9,7 @@
         <p class="mb-3">You have been signed out of REX Events.</p>
         <div class="flex-between" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
             {% if oidc_enabled %}
-            <a href="{% url 'oidc_authentication_init' %}" class="btn btn-primary">Log in with Touchstone</a>
+            <a href="{% url 'oidc_authentication_init' %}" target="_top" rel="noopener" class="btn btn-primary">Log in with Touchstone</a>
             {% else %}
             <a href="{% url 'admin:login' %}" class="btn btn-primary">Log in</a>
             {% endif %}

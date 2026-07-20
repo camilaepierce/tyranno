@@ -120,7 +120,11 @@
                             </form>
                             {% endif %}
                         {% elif oidc_enabled %}
-                            <a href="{% url 'oidc_authentication_init' %}" class="btn btn-primary btn-sm">Log in with Touchstone</a>
+                            <a href="{% url 'oidc_authentication_init' %}" target="_top" rel="noopener" class="btn btn-primary btn-sm">Log in with Touchstone</a>
+                        {% elif debug %}
+                            <span style="color: var(--text-secondary); font-size: 0.875rem;">Set OIDC credentials in <code>.env</code> to enable Touchstone login.</span>
+                        {% else %}
+                            <a href="{% url 'admin:login' %}" class="btn btn-primary btn-sm">Staff log in</a>
                         {% endif %}
                     </div>
                 </div>
