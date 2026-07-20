@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}REX Events Management{% endblock %}</title>
+    <link rel="stylesheet" href="https://use.typekit.net/qxe5rxu.css">
     <link rel="stylesheet" href="{% static 'css/theme.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
@@ -12,7 +13,13 @@
     <div class="page-container">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
-            <h2>REX Events</h2>
+            <div class="sidebar-brand">
+                <span class="sidebar-brand__mark">DC</span>
+                <div>
+                    <h2>MIT DormCon</h2>
+                    <p class="sidebar-brand__subtitle">REX Events</p>
+                </div>
+            </div>
             
             <!-- Main Navigation -->
             <nav class="nav-section">

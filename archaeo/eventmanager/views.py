@@ -9,8 +9,10 @@ import json
 
 from .models import RexEvent, RexUser, SiteConfiguration
 from .csv_export import events_csv_response
-from .rex_config import dorm_groups_for_js
+from .api_export import rex_api_json_response
+from .rex_config import get_rex_name, dorm_groups_for_js
 from django.urls import reverse_lazy
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from .forms import EventForm, ApprovalForm
 
@@ -158,6 +160,21 @@ def logged_out(request):
 
     context = get_user_context(request)
     return render(request, "eventmanager/logged_out.html", context)
+
+
+@xframe_options_exempt
+def public_events_embed(request):
+    events = RexEvent.fully_approved().order_by("start_time", "event_name")
+    context = {
+        "events": events,
+        "rex_name": get_rex_name(),
+        "event_count": events.count(),
+    }
+    return render(request, "eventmanager/public_events.html", context)
+
+
+def rex_api_json(request):
+    return rex_api_json_response()
 
 
 class IndexView(generic.ListView):

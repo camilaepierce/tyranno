@@ -146,6 +146,16 @@ class RexEvent(models.Model):
             for status_field in self.approval_status_fields()
         )
 
+    @classmethod
+    def fully_approved(cls):
+        approved = cls.ApprovalStatus.APPROVED
+        return cls.objects.filter(
+            dc_status=approved,
+            ad_status=approved,
+            res_status=approved,
+            ehs_status=approved,
+        )
+
     def notification_emails(self):
         emails = []
         for part in self.email_notif.replace(",", "\n").splitlines():

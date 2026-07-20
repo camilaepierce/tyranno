@@ -1,0 +1,73 @@
+{% extends 'eventmanager/embed_base.html' %}
+{% load static rex_tags %}
+
+{% block title %}{{ rex_name }} Events{% endblock %}
+
+{% block content %}
+<div class="embed-page">
+    <header class="embed-header">
+        <h1 class="embed-title">{{ rex_name }} Events</h1>
+        <p class="embed-meta">
+            <strong>{{ event_count }}</strong>
+            approved event{{ event_count|pluralize }}
+        </p>
+    </header>
+
+    {% if events %}
+    <div class="event-grid">
+        {% for event in events %}
+        <article class="rex-card{% if event.tags|has_event_tag:'signature' %} rex-card-signature{% endif %}" id="event-{{ event.pk|stringformat:'04d' }}">
+            <div class="rex-card__header">
+                <h2 class="rex-card__title">{{ event.event_name }}</h2>
+                {% if event.tags %}
+                <div class="rex-card__tags">
+                    {% for tag in event.tags|event_tags %}
+                    {% with color=tag|tag_badge_color %}
+                    <span class="rex-badge"
+                          {% if color %}style="background-color: {{ color }}; border-color: {{ color }}; color: {{ color|badge_foreground }};"{% endif %}>
+                        {{ tag|tag_label }}
+                    </span>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="rex-card__body">
+                <p class="rex-card__description">{{ event.description }}</p>
+                <p class="rex-card__schedule">
+                    {% include 'eventmanager/_event_schedule.html' with event=event %}
+                </p>
+            </div>
+
+            <div class="rex-card__footer">
+                {% with color=event.dorm|dorm_badge_color %}
+                <span class="rex-badge"
+                      {% if color %}style="background-color: {{ color }}; border-color: {{ color }}; color: {{ color|badge_foreground }};"{% endif %}>
+                    {{ event.dorm|dorm_label }}
+                </span>
+                {% endwith %}
+                {% if event.dorm_sub != "N/A" %}
+                {% with color=event.dorm|group_badge_color:event.dorm_sub %}
+                <span class="rex-badge rex-badge-outline"
+                      {% if color %}style="border-color: {{ color }};"{% endif %}>
+                    {{ event.dorm_sub }}
+                </span>
+                {% endwith %}
+                {% endif %}
+                <span class="rex-card__location">
+                    📍 {{ event.location }}
+                </span>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="embed-empty">
+        <strong>No approved events are available yet.</strong>
+        Check back later!
+    </div>
+    {% endif %}
+</div>
+<script src="{% static 'js/embed.js' %}"></script>
+{% endblock %}

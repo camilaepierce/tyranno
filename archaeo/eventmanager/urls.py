@@ -4,6 +4,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("api.json", views.rex_api_json, name="rex-api-json"),
+    path("embed/events/", views.public_events_embed, name="public-events-embed"),
     path("", views.IndexView.as_view(), name="index"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("logged-out/", views.logged_out, name="logged_out"),

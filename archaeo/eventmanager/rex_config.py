@@ -113,3 +113,33 @@ def format_event_tags_for_display(raw_value: str) -> str:
 
 def format_event_tags_for_export(raw_value: str) -> str:
     return ",".join(tag_display_name(tag) for tag in parse_event_tags(raw_value))
+
+
+def dorm_color(dorm_key: str) -> str | None:
+    return load_rex_config()["dorms"].get(dorm_key, {}).get("color")
+
+
+def tag_color(tag_key: str) -> str | None:
+    return load_rex_config()["tags"].get(tag_key, {}).get("color")
+
+
+def group_color(dorm_key: str, group_name: str) -> str | None:
+    groups = load_rex_config()["dorms"].get(dorm_key, {}).get("groups", {})
+    return groups.get(group_name, {}).get("color")
+
+
+def badge_text_color(background: str) -> str:
+    """Pick black or white text for a colored badge background."""
+    value = background.strip().lower()
+    if value.startswith("#") and len(value) in {4, 7}:
+        if len(value) == 4:
+            r = int(value[1] * 2, 16)
+            g = int(value[2] * 2, 16)
+            b = int(value[3] * 2, 16)
+        else:
+            r = int(value[1:3], 16)
+            g = int(value[3:5], 16)
+            b = int(value[5:7], 16)
+        luminance = r * 0.299 + g * 0.587 + b * 0.114
+        return "#000000" if luminance > 186 else "#ffffff"
+    return "#ffffff"
