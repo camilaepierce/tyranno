@@ -57,6 +57,24 @@ class DepartmentConfigTests(TestCase):
             clear_department_emails_cache()
             self.assertEqual(lookup_role_for_email("both@mit.edu"), ("DormCon", ""))
 
+    def test_loads_from_secrets_path_when_present(self):
+        self._write_config({"DormCon": ["secrets@mit.edu"], "RES": [], "EHS": [], "AD": {}})
+
+        with patch("eventmanager.department_config.SECRETS_CONFIG_PATH", self.config_path):
+            clear_department_emails_cache()
+            self.assertEqual(lookup_role_for_email("secrets@mit.edu"), ("DormCon", ""))
+
+    def test_secrets_path_takes_priority_over_local_config(self):
+        local_path = Path(self.temp_dir.name) / "local_department_emails.json"
+        local_path.write_text(json.dumps({"DormCon": ["local@mit.edu"], "RES": [], "EHS": [], "AD": {}}))
+        self._write_config({"DormCon": ["secrets@mit.edu"], "RES": [], "EHS": [], "AD": {}})
+
+        with patch("eventmanager.department_config.SECRETS_CONFIG_PATH", self.config_path):
+            with patch("eventmanager.department_config.CONFIG_PATH", local_path):
+                clear_department_emails_cache()
+                self.assertEqual(lookup_role_for_email("secrets@mit.edu"), ("DormCon", ""))
+                self.assertEqual(lookup_role_for_email("local@mit.edu"), ("Student", ""))
+
 
 class PetrockAuthTests(TestCase):
     def test_sync_rex_user_creates_student_record(self):

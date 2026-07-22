@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from pathlib import Path
-import json
 
 from .models import RexUser
 
+SECRETS_CONFIG_PATH = Path("/etc/secrets/department_emails.json")
 CONFIG_PATH = Path(__file__).with_name("department_emails.json")
 EXAMPLE_PATH = Path(__file__).with_name("department_emails.example.json")
 
@@ -26,10 +27,20 @@ def _email_in_list(email: str, emails: list[str]) -> bool:
     return any(_normalize_email(entry) == normalized for entry in emails)
 
 
+def _resolve_config_path() -> Path | None:
+    if SECRETS_CONFIG_PATH.exists():
+        return SECRETS_CONFIG_PATH
+    if CONFIG_PATH.exists():
+        return CONFIG_PATH
+    if EXAMPLE_PATH.exists():
+        return EXAMPLE_PATH
+    return None
+
+
 @lru_cache
 def load_department_emails() -> dict:
-    path = CONFIG_PATH if CONFIG_PATH.exists() else EXAMPLE_PATH
-    if not path.exists():
+    path = _resolve_config_path()
+    if path is None:
         return DEFAULT_CONFIG.copy()
 
     with path.open(encoding="utf-8") as config_file:
