@@ -14,6 +14,8 @@ from .rex_config import get_rex_name, dorm_groups_for_js
 from django.urls import reverse_lazy
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
+import random
+
 from .forms import EventForm, ApprovalForm
 
 
@@ -52,8 +54,8 @@ def _get_rex_user(request):
     return None
 
 
-def _add_approval_context(context, event, user_role):
-    if not user_role or not event.role_can_approve(user_role):
+def _add_approval_context(context, event, user_role, rex_user=None):
+    if not user_role or not event.role_can_approve(user_role, rex_user):
         return
 
     status_field, comment_field = RexEvent.ROLE_TO_APPROVAL[user_role]
@@ -71,9 +73,31 @@ def _user_can_edit_event(rex_user, event, editing_enabled):
     )
 
 
-DELETE_CONFIRMATION_PHRASE = (
-    "tell camila to update this message before deployment"
+DELETE_CONFIRMATION_PHRASES = (
+    "I'm a beaver, you're a beaver, we are beavers all",
+    "cosine, secant, tangent, sine, 3.14159",
+    "Slipstick, sliderule, MIT! Go Tech!",
+    "His habits are nocturnal. He does his best work in the dark.",
+    "Hack, Punt, Tool",
+    "I AM SO EXCITED FOR REX",
 )
+
+
+def _delete_confirmation_session_key(event_pk):
+    return f"delete_confirmation_phrase_{event_pk}"
+
+
+def _get_delete_confirmation_phrase(request, event_pk):
+    session_key = _delete_confirmation_session_key(event_pk)
+    phrase = request.session.get(session_key)
+    if not phrase:
+        phrase = random.choice(DELETE_CONFIRMATION_PHRASES)
+        request.session[session_key] = phrase
+    return phrase
+
+
+def _clear_delete_confirmation_phrase(request, event_pk):
+    request.session.pop(_delete_confirmation_session_key(event_pk), None)
 
 
 def _add_edit_context(context, event, rex_user, editing_enabled):
@@ -134,17 +158,22 @@ class EventDeleteView(EventEditPermissionMixin, LoginRequiredMixin, DeleteView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(get_user_context(self.request))
-        context["delete_confirmation_phrase"] = DELETE_CONFIRMATION_PHRASE
+        context["delete_confirmation_phrase"] = _get_delete_confirmation_phrase(
+            self.request,
+            self.object.pk,
+        )
         return context
 
     def post(self, request, *args, **kwargs):
+        expected_phrase = _get_delete_confirmation_phrase(request, self.object.pk)
         confirmation = request.POST.get("confirmation_phrase", "").strip()
-        if confirmation != DELETE_CONFIRMATION_PHRASE:
+        if confirmation != expected_phrase:
             messages.error(
                 request,
                 "Deletion cancelled. Type the exact confirmation message to proceed.",
             )
             return self.render_to_response(self.get_context_data())
+        _clear_delete_confirmation_phrase(request, self.object.pk)
         return super().post(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
@@ -197,7 +226,7 @@ class DetailView(generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(get_user_context(self.request))
-        _add_approval_context(context, self.object, context.get('user_role'))
+        _add_approval_context(context, self.object, context.get('user_role'), context.get('rex_user'))
         _add_edit_context(
             context,
             self.object,
@@ -212,9 +241,10 @@ def approve_event(request, pk):
     event = get_object_or_404(RexEvent, pk=pk)
     user_context = get_user_context(request)
     user_role = user_context.get('user_role')
+    rex_user = user_context.get('rex_user')
     approval_mapping = RexEvent.ROLE_TO_APPROVAL.get(user_role)
 
-    if not approval_mapping or not event.role_can_approve(user_role):
+    if not approval_mapping or not event.role_can_approve(user_role, rex_user):
         return HttpResponseForbidden("You do not have permission to approve this event.")
 
     status_field, comment_field = approval_mapping
@@ -340,10 +370,13 @@ def dep_ehs(request):
 
 @login_required
 def dep_ad(request):
+    rex_user = _get_rex_user(request)
     upcoming_events = RexEvent.objects.filter(
         dc_status='AP',
         ad_status__in=['PE', 'FL'],
     ).order_by("-start_time")
+    if rex_user and rex_user.role == RexUser.RoleChoices.AD and rex_user.dorm:
+        upcoming_events = upcoming_events.filter(dorm=rex_user.dorm)
     template = loader.get_template("departments/ad/pending.html")
     context = {
         "upcoming_events_list": upcoming_events,

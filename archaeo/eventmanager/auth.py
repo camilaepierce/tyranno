@@ -1,5 +1,6 @@
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
+from .department_config import lookup_role_for_email
 from .models import RexUser
 
 
@@ -69,8 +70,10 @@ class PetrockOIDCBackend(OIDCAuthenticationBackend):
             return
 
         display_name = claims.get("name") or email.split("@", 1)[0]
+        role, dorm = lookup_role_for_email(email)
         RexUser.objects.create(
             email=email,
             username=display_name,
-            role=RexUser.RoleChoices.STUDENT,
+            role=role,
+            dorm=dorm,
         )

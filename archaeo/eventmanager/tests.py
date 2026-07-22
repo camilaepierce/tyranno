@@ -1,8 +1,61 @@
 from django.contrib.auth.models import User
+from django.core import mail
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-from .models import RexUser
+from .models import RexEvent, RexUser
+from .department_config import clear_department_emails_cache, lookup_role_for_email
+
+
+class DepartmentConfigTests(TestCase):
+    def setUp(self):
+        self.temp_dir = TemporaryDirectory()
+        self.config_path = Path(self.temp_dir.name) / "department_emails.json"
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+        clear_department_emails_cache()
+
+    def _write_config(self, data):
+        self.config_path.write_text(json.dumps(data))
+        clear_department_emails_cache()
+
+    def test_lookup_assigns_department_roles(self):
+        self._write_config(
+            {
+                "DormCon": ["dormcon@mit.edu"],
+                "RES": ["res@mit.edu"],
+                "EHS": ["ehs@mit.edu"],
+                "AD": {"Baker House": ["ad@mit.edu"]},
+            }
+        )
+
+        with patch("eventmanager.department_config.CONFIG_PATH", self.config_path):
+            clear_department_emails_cache()
+            self.assertEqual(lookup_role_for_email("dormcon@mit.edu"), ("DormCon", ""))
+            self.assertEqual(lookup_role_for_email("res@mit.edu"), ("RES", ""))
+            self.assertEqual(lookup_role_for_email("ad@mit.edu"), ("AD", "Baker House"))
+            self.assertEqual(lookup_role_for_email("student@mit.edu"), ("Student", ""))
+
+    def test_lookup_prefers_higher_priority_role(self):
+        self._write_config(
+            {
+                "DormCon": ["both@mit.edu"],
+                "RES": [],
+                "EHS": [],
+                "AD": {"Next House": ["both@mit.edu"]},
+            }
+        )
+
+        with patch("eventmanager.department_config.CONFIG_PATH", self.config_path):
+            clear_department_emails_cache()
+            self.assertEqual(lookup_role_for_email("both@mit.edu"), ("DormCon", ""))
 
 
 class PetrockAuthTests(TestCase):
@@ -27,6 +80,41 @@ class PetrockAuthTests(TestCase):
         rex_user = RexUser.objects.get(email="student@mit.edu")
         self.assertEqual(rex_user.role, "Student")
         self.assertEqual(rex_user.username, "Test Student")
+        self.assertEqual(rex_user.dorm, "")
+
+    def test_sync_rex_user_assigns_role_from_department_config(self):
+        from .auth import PetrockOIDCBackend
+
+        with TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "department_emails.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "DormCon": [],
+                        "RES": ["res@mit.edu"],
+                        "EHS": [],
+                        "AD": {"Simmons Hall": ["ad@mit.edu"]},
+                    }
+                )
+            )
+            with patch("eventmanager.department_config.CONFIG_PATH", config_path):
+                clear_department_emails_cache()
+                backend = PetrockOIDCBackend()
+                user = User.objects.create_user(
+                    username="ad@mit.edu",
+                    email="ad@mit.edu",
+                )
+                backend._sync_rex_user(
+                    user,
+                    {
+                        "email": "ad@mit.edu",
+                        "name": "Simmons AD",
+                    },
+                )
+
+        rex_user = RexUser.objects.get(email="ad@mit.edu")
+        self.assertEqual(rex_user.role, "AD")
+        self.assertEqual(rex_user.dorm, "Simmons Hall")
 
     def test_sync_rex_user_does_not_create_duplicate_when_email_exists(self):
         from .auth import PetrockOIDCBackend
@@ -106,6 +194,7 @@ class PetrockAuthTests(TestCase):
             username="AD User",
             role="AD",
             email="ad@mit.edu",
+            dorm="Baker House",
         )
         user = User.objects.create_user(
             username="different-username",
@@ -147,6 +236,99 @@ class PetrockAuthTests(TestCase):
 
         rex_user = _get_rex_user(request)
         self.assertEqual(rex_user.role, "DormCon")
+
+
+class ApprovalRequestEmailTests(TestCase):
+    def setUp(self):
+        self.dormcon = RexUser.objects.create(
+            username="DormCon",
+            role="DormCon",
+            email="dormcon@mit.edu",
+        )
+        self.start = timezone.now() + timedelta(days=1)
+        self.end = self.start + timedelta(hours=2)
+
+    def _create_event(self):
+        return RexEvent.objects.create(
+            event_name="Test Event",
+            description="Desc",
+            dorm="Baker House",
+            dorm_sub="N/A",
+            start_time=self.start,
+            end_time=self.end,
+            email_notif="student@mit.edu",
+            location="Lobby",
+            contact_name="Student",
+            contact_email="student@mit.edu",
+        )
+
+    @override_settings(SEND_APPROVAL_REQUEST_EMAILS=True)
+    def test_sends_approval_request_email_when_enabled(self):
+        self._create_event()
+        self.assertEqual(len(mail.outbox), 2)
+        subjects = {message.subject for message in mail.outbox}
+        self.assertIn("Approval needed for Test Event", subjects)
+
+    @override_settings(SEND_APPROVAL_REQUEST_EMAILS=False)
+    def test_skips_approval_request_email_when_disabled(self):
+        self._create_event()
+        subjects = [message.subject for message in mail.outbox]
+        self.assertNotIn("Approval needed for Test Event", subjects)
+
+
+class AreaDirectorApprovalTests(TestCase):
+    def setUp(self):
+        self.ad_user = RexUser.objects.create(
+            username="Baker AD",
+            role="AD",
+            email="baker-ad@mit.edu",
+            dorm="Baker House",
+        )
+        self.other_ad = RexUser.objects.create(
+            username="Next AD",
+            role="AD",
+            email="next-ad@mit.edu",
+            dorm="Next House",
+        )
+        self.start = timezone.now() + timedelta(days=1)
+        self.end = self.start + timedelta(hours=2)
+
+    def _create_event(self, dorm):
+        return RexEvent.objects.create(
+            event_name="Test Event",
+            description="Desc",
+            dorm=dorm,
+            dorm_sub="N/A",
+            start_time=self.start,
+            end_time=self.end,
+            email_notif="student@mit.edu",
+            location="Lobby",
+            contact_name="Student",
+            contact_email="student@mit.edu",
+            dc_status=RexEvent.ApprovalStatus.APPROVED,
+        )
+
+    def test_ad_can_only_approve_events_for_assigned_dorm(self):
+        baker_event = self._create_event("Baker House")
+        next_event = self._create_event("Next House")
+
+        self.assertTrue(baker_event.role_can_approve("AD", self.ad_user))
+        self.assertFalse(next_event.role_can_approve("AD", self.ad_user))
+
+    def test_dep_ad_lists_only_assigned_dorm_events(self):
+        baker_event = self._create_event("Baker House")
+        self._create_event("Next House")
+
+        user = User.objects.create_user(
+            username="baker-ad@mit.edu",
+            email="baker-ad@mit.edu",
+        )
+        self.client.force_login(user)
+        response = self.client.get(reverse("dep_ad"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, baker_event.event_name)
+        self.assertNotContains(response, "Next House")
 
 
 @override_settings(DEBUG=True)

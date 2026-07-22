@@ -20,6 +20,12 @@ class RexUser(models.Model):
     username = models.CharField(max_length=200)
     role = models.CharField(max_length=10, choices=RoleChoices.choices)
     email = models.EmailField(null=True, blank=True)
+    dorm = models.CharField(
+        max_length=40,
+        blank=True,
+        default="",
+        help_text="For area directors, the dorm whose events they may approve.",
+    )
 
     ROLE_LOOKUP_PRIORITY = (
         RoleChoices.DORMCON,
@@ -188,10 +194,16 @@ class RexEvent(models.Model):
                 return field_names, roles
         return None, ()
 
-    def role_can_approve(self, role):
+    def role_can_approve(self, role, rex_user=None):
         _, stage_roles = self.active_approval_stage()
         if role not in stage_roles:
             return False
+
+        if role == RexUser.RoleChoices.AD:
+            if rex_user is None or rex_user.role != RexUser.RoleChoices.AD:
+                return False
+            if not rex_user.dorm or rex_user.dorm != self.dorm:
+                return False
 
         status_field, _ = self.ROLE_TO_APPROVAL[role]
         status = getattr(self, status_field)
@@ -201,14 +213,32 @@ class RexEvent(models.Model):
         return f"{settings.SITE_URL}{reverse('event', kwargs={'pk': self.pk})}"
 
     def _notify_roles(self, roles):
-        recipients = list(
-            dict.fromkeys(
-                RexUser.objects.filter(role__in=roles)
+        if not settings.SEND_APPROVAL_REQUEST_EMAILS:
+            return
+
+        recipients = []
+        other_roles = []
+
+        for role in roles:
+            if role == RexUser.RoleChoices.AD:
+                recipients.extend(
+                    RexUser.objects.filter(role=RexUser.RoleChoices.AD, dorm=self.dorm)
+                    .exclude(email__isnull=True)
+                    .exclude(email="")
+                    .values_list("email", flat=True)
+                )
+            else:
+                other_roles.append(role)
+
+        if other_roles:
+            recipients.extend(
+                RexUser.objects.filter(role__in=other_roles)
                 .exclude(email__isnull=True)
                 .exclude(email="")
                 .values_list("email", flat=True)
             )
-        )
+
+        recipients = list(dict.fromkeys(recipients))
         if not recipients:
             return
 
